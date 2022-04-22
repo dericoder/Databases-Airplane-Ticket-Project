@@ -5,8 +5,8 @@ import Navbar from './Navbar';
 class Content extends React.Component {
   render() {
     return (
-      <div class="content">
-        <h1>test</h1>
+      <div className="content">
+        <h1>content</h1>
       </div>
     )
   }
@@ -15,7 +15,7 @@ class Content extends React.Component {
 function App() {
   return (
     <div id="root">
-      <div class="wrapper">
+      <div className="wrapper">
         <Navbar />
         <Content />
       </div>

@@ -1,12 +1,22 @@
 import './Navbar.css'
 import React from 'react';
-import Container from 'react-bootstrap/Container'
+import Button from 'react-bootstrap/Button'
 
 class Navbar extends React.Component {
     render() {
         return (
-            <Container id="test">
-            </Container>
+            <div className="bar">
+                <NavItem name="login"/>
+            </div>
+        );
+    }
+}
+
+class NavItem extends React.Component {
+
+    render() {
+        return (
+            <Button className="nav-item">{this.props.name}</Button>
         );
     }
 }
