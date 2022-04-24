@@ -1,32 +1,52 @@
+"""
+successful queries
+{
+    status: 0,
+    result: [
+        {...},
+        {...}
+    ]
+}
+
+failed queries
+{
+    status: -1,
+    reason: ...
+}
+"""
+
 from flask import Flask, request, jsonify, session, redirect, url_for
+from flask_cors import CORS
 import pymysql.cursors
-from forms import RegistrationForm
 
 CUSTOMER = 1
 AGENT = 2
 STAFF = 3
 
 app = Flask(__name__)
+CORS(app)
 
 cnx = pymysql.connect(host='localhost',
 					port=3306,
-					user='root',
-                    password='Root123.',
-                    db='finalproject')
+					user='Admin',
+                    password='Admin123.',
+                    db='db_project')
+
+@app.route("/search")
+def search():
+    if(request.args.get('type') == CUSTOMER):
+        customer_search()
+
+def customer_search():
+    pass
 
 @app.route("/")
 def foo():
-    with cnx.cursor() as cur:
-        query = "select * from airline"
-        cur.execute(query)
-        data = cur.fetchall()
-    data = str(data[0][0])
-    return data
+    return "test"
 
 @app.route("/test")
 def test():
     return "<h1>test</h1>"
-
 
 @app.route('/public')
 def public():
@@ -48,7 +68,6 @@ def register():
     """
     
     """
-
 
     if request.args[0] == CUSTOMER:
 
@@ -146,67 +165,61 @@ def register():
 
 #LOGIN
 
-@app.route("/login", methods = ["GET", "POST"])
+@app.route("/login")
 def login():
+    user = request.args.get('user')
+    password = request.args.get('password')
+    type = int(request.args.get('type'))
 
-    if request.args[0] == CUSTOMER:
-        email = request.form.get('email')
-        password = request.form.get('password')
-
+    if type == CUSTOMER:
         with cnx.cursor() as cur:
-                query = 'select email, password from customer where email = {email}'
-                cur.execute(query)
-                data = cur.fetchone()
-
-                if not data:
-                    error = 'User not found'
+            query = 'select email, password from customer where email = \'{}\''.format(user)
+            cur.execute(query)
+            data = cur.fetchone()
+            if not data:
+                error = 'User not found'
+                return error
+            else:
+                if data[1] != password:
+                    error = 'Incorrect Password'
                     return error
                 else:
-                    if data[1] != password:
-                        error = 'Incorrect Password'
-                        return error
-                    else:
-                        return 'Login Success'
+                    return 'Login Success'
 
 
-    elif request.args[0] == STAFF:
-        username = request.form.get('username')
-        password = request.form.get('password')
-
+    elif type == STAFF:
+        print ("looking for staff")
         with cnx.cursor() as cur:
-                query = 'select username, password from airline_staff where email = {username}'
-                cur.execute(query)
-                data = cur.fetchone()
+            query = 'select username, password from airline_staff where username = \'{}\''.format(user)
+            print(query)
+            cur.execute(query)
+            data = cur.fetchone()
 
-                if not data:
-                    error = 'User not found'
+            if not data:
+                error = 'User not found'
+                return error
+            else:
+                if data[1] != password:
+                    error = 'Incorrect Password'
                     return error
                 else:
-                    if data[1] != password:
-                        error = 'Incorrect Password'
-                        return error
-                    else:
-                        return 'Login Success'
+                    return 'Login Success'
 
-    elif request.args[0] == AGENT:
-        email = request.form.get('email')
-        password = request.form.get('password')
-
+    elif type == AGENT:
         with cnx.cursor() as cur:
-                query = 'select email, password from booking_agent where email = {email}'
-                cur.execute(query)
-                data = cur.fetchone()
+            query = 'select email, password from booking_agent where email = \'{}\''.format(user)
+            cur.execute(query)
+            data = cur.fetchone()
 
-                if not data:
-                    error = 'User not found'
+            if not data:
+                error = 'User not found'
+                return error
+            else:
+                if data[1] != password:
+                    error = 'Incorrect Password'
                     return error
                 else:
-                    if data[1] != password:
-                        error = 'Incorrect Password'
-                        return error
-                    else:
-                        return 'Login Success'
+                    return 'Login Success'
 
-
-if __name__ == '__main__':
-    app.run()
+    return {'status': -1, 'reason': 'Server error'}
+    
