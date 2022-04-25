@@ -3,8 +3,7 @@ successful queries
 {
     status: 0,
     result: [
-        {...},
-        {...}
+        {}, {}
     ]
 }
 
@@ -15,9 +14,11 @@ failed queries
 }
 """
 
+from msilib.schema import Error
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 import pymysql.cursors
+from response import ErrorResponse
 
 CUSTOMER = 1
 AGENT = 2
@@ -57,9 +58,6 @@ def public():
 
     result = str(data)
     return result
-
-
-
 
 #REGISTER
 
@@ -221,5 +219,4 @@ def login():
                 else:
                     return 'Login Success'
 
-    return {'status': -1, 'reason': 'Server error'}
-    
+    return ErrorResponse('System error')
