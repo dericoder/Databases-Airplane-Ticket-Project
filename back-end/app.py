@@ -18,6 +18,7 @@ failed queries
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 import pymysql.cursors
+import date
 
 CUSTOMER = 1
 AGENT = 2
@@ -28,9 +29,9 @@ CORS(app)
 
 cnx = pymysql.connect(host='localhost',
 					port=3306,
-					user='Admin',
-                    password='Admin123.',
-                    db='db_project')
+					user='root',
+                    password='Root123.',
+                    db='finalproject')
 
 @app.route("/search")
 def search():
@@ -161,6 +162,7 @@ def register():
             error = 'Registration failed!'
             return error
 
+    return {'status': -1, 'reason': 'Server error'}
 
 
 #LOGIN
@@ -222,4 +224,45 @@ def login():
                     return 'Login Success'
 
     return {'status': -1, 'reason': 'Server error'}
-    
+
+#CUSTOMER USE CASES
+@app.route('/customer_viewmyflights', methods = ['GET','POST'])
+def customer_viewmyflights():
+    customer = session['customer']
+    with cnx.cursor(pymysql.cursors.DictCursor) as cur:        
+        query = "select distinct * from flight natural join purchases natural join ticket where purchases.customer_email = {customer} and flight.status = 'Upcoming'"
+        cur.execute(query)
+        data = cur.fetchall()
+    result = str(data)
+    return result
+
+
+
+@app.route('/customer_purchasetickets', methods = ['GET', 'POST'])
+def customer_purchaseflights():
+    customer = session['customer']
+    with cnx.cursor() as cur:
+        query1 = "select flight.flight_num and ticket.ticket_id from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email = {customer} and flight.status = 'Upcoming'"
+        cur.execute(query1)
+        data = cur.fetchone()
+        if not data:
+            return 'No flights available'
+        else:
+            today = date.today()
+            today = today.strftime("%Y-%m-%d")
+            ticket_id = data[1] + 1
+            query2 = 'insert into purchases values ({ticket_id}, {customer}, null, {today}'
+            cur.execute(query2)
+        cnx.commit()
+        
+    return 'Ticket purchase successful!'
+
+
+
+@app.route('/customer_searchforflights', methods = ['GET', 'POST'])
+def customer_searchforflights():
+    return 'a'
+
+if __name__ == '__main__':
+    app.run()
+
