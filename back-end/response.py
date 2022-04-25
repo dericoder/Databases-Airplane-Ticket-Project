@@ -53,3 +53,25 @@ class Staff(Data):
         self.addData('last_name', lName)
         self.addData('date_of_birth', dob)
         self.addData('works_for', works)
+
+class Agent(Data):
+    def __init__(self, email, password, booking_agent_id):
+        super().__init__()
+        self.addData('email', email)
+        self.addData('password', password)
+        self.addData('booking_agent_id', booking_agent_id)
+
+class Customer(Data):
+    def __init__(self, email, name, password, building_number, street, city, state, phone_number, passport_number, passport_expiration, dob):
+        super().__init__()
+        self.addData('email', email)
+        self.addData('name', name)
+        self.addData('password', password)
+        self.addData('building_number', building_number)
+        self.addData('street', street)
+        self.addData('city', city)
+        self.addData('state', state)
+        self.addData('phone_number', phone_number)
+        self.addData('passport_number', passport_number)
+        self.addData('passport_expiration', passport_expiration)
+        self.addData('date_of_birth', dob)
