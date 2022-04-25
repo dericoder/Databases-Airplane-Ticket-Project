@@ -3,8 +3,7 @@ successful queries
 {
     status: 0,
     result: [
-        {...},
-        {...}
+        {}, {}
     ]
 }
 
@@ -18,7 +17,8 @@ failed queries
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 import pymysql.cursors
-import date
+from datetime import date
+from response import ErrorResponse, Response, Staff, Customer, Agent
 
 CUSTOMER = 1
 AGENT = 2
@@ -59,9 +59,6 @@ def public():
     result = str(data)
     return result
 
-
-
-
 #REGISTER
 
 @app.route("/register", methods = ["POST"])
@@ -90,8 +87,8 @@ def register():
                 data = cur.fetchone()
 
                 if data:
-                    error = 'This user already exists!'
-                    return error
+                    err = 'This user already exists!'
+                    return ErrorResponse(err).json()
                 else:
                     ins = 'insert into customer values ({email}, {name}, {password}, {building_number}, {street}, {city}, {state}, {phone_number}, {passport_number}, {passport_expiration}, {date_of_birth})'
                     
@@ -99,10 +96,10 @@ def register():
                         cur.execute(ins)
                     cnx.commit()
 
-                    return 'Registration Success'
+                    return 'Registration Successful'
         except:
-            error = 'Registration failed!'
-            return error
+            err = 'Registration failed!'
+            return ErrorResponse(err).json()
 
 
     elif request.args[0] == STAFF:
@@ -120,8 +117,8 @@ def register():
                 data = cur.fetchone()
 
                 if data:
-                    error = 'This user already exists!'
-                    return error
+                    err = 'This user already exists!'
+                    return ErrorResponse(err).json()
                 else:
                     ins = 'insert into airline_staff values ({username}, {password}, {first_name}, {last_name}, {date_of_birth}, {airline_name})'
                     
@@ -129,10 +126,10 @@ def register():
                         cur.execute(ins)
                     cnx.commit()
 
-                    return 'Registration Success'
+                    return 'Registration Successful'
         except:
-            error = 'Registration failed!'
-            return error
+            err = 'Registration failed!'
+            return ErrorResponse(err).json()
 
 
     elif request.args[0] == AGENT:
@@ -147,8 +144,8 @@ def register():
                 data = cur.fetchone()
 
                 if data:
-                    error = 'This user already exists!'
-                    return error
+                    err = 'This user already exists!'
+                    return ErrorResponse(err).json()
                 else:
                     ins = 'insert into booking_agent values ({email}, {password}, {booking_agent_id})'
                     
@@ -156,11 +153,11 @@ def register():
                         cur.execute(ins)
                     cnx.commit()
 
-                    return 'Registration Success'
+                    return 'Registration Successful'
 
         except:
-            error = 'Registration failed!'
-            return error
+            err = 'Registration failed!'
+            return ErrorResponse(err).json()
 
     return {'status': -1, 'reason': 'Server error'}
 
@@ -174,56 +171,61 @@ def login():
     type = int(request.args.get('type'))
 
     if type == CUSTOMER:
-        with cnx.cursor() as cur:
-            query = 'select email, password from customer where email = \'{}\''.format(user)
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            query = 'select * from customer where email = \'{}\''.format(user)
             cur.execute(query)
             data = cur.fetchone()
             if not data:
-                error = 'User not found'
-                return error
+                return ErrorResponse('User not found').json()
+
             else:
                 if data[1] != password:
-                    error = 'Incorrect Password'
-                    return error
+                    return ErrorResponse('User not found').json()
                 else:
-                    return 'Login Success'
+                    session["customer"] = user
+                    customer = Customer(data[0]['email'],data[0]['name'],data[0]['building_number'],
+                                        data[0]['building_number'],data[0]['street'],
+                                        data[0]['city'],data[0]['state'],data[0]['phone_number'], data[0]['passport_number'],
+                                        data[0]['passport_expiration'],data[0]['date_of_birth'])
+                    return Response(0).addData(customer).json()
 
 
     elif type == STAFF:
-        print ("looking for staff")
         with cnx.cursor() as cur:
-            query = 'select username, password from airline_staff where username = \'{}\''.format(user)
-            print(query)
+            query = 'select * from airline_staff where username = \'{}\''.format(user)
             cur.execute(query)
             data = cur.fetchone()
 
             if not data:
-                error = 'User not found'
-                return error
+                return ErrorResponse('User not found').json()
             else:
                 if data[1] != password:
-                    error = 'Incorrect Password'
-                    return error
+                    return ErrorResponse('Incorrect password').json()
                 else:
-                    return 'Login Success'
+                    session["staff"] = user
+                    staff = Staff(data[0]['username'], data[0]['first_name'], data[0]['last_name'], data[0]['date_of_birth'], data[0]['works_for'])
+                    return Response(0).addData(staff).json()
+
 
     elif type == AGENT:
         with cnx.cursor() as cur:
-            query = 'select email, password from booking_agent where email = \'{}\''.format(user)
+            query = 'select * from booking_agent where email = \'{}\''.format(user)
             cur.execute(query)
             data = cur.fetchone()
 
             if not data:
-                error = 'User not found'
-                return error
+                return ErrorResponse('User not found').json()
             else:
                 if data[1] != password:
-                    error = 'Incorrect Password'
-                    return error
+                    return ErrorResponse('Incorrect password').json()
                 else:
-                    return 'Login Success'
+                    session["agent"] = user
+                    staff = Agent(data[0]['email'], data[0]['booking_agent_id'])
+                    return Response(0).addData(staff).json()
 
-    return {'status': -1, 'reason': 'Server error'}
+
+    return ErrorResponse('System error')
+
 
 #CUSTOMER USE CASES
 @app.route('/customer_viewmyflights', methods = ['GET','POST'])
