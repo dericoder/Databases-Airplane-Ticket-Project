@@ -29,9 +29,9 @@ CORS(app)
 
 cnx = pymysql.connect(host='localhost',
 					port=3306,
-					user='root',
-                    password='Root123.',
-                    db='finalproject')
+					user='Admin',
+                    password='Admin123.',
+                    db='db_project')
 
 @app.route("/search")
 def search():
@@ -202,7 +202,6 @@ def login():
                 if data[1] != password:
                     return ErrorResponse('Incorrect password').json()
                 else:
-                    session["staff"] = user
                     staff = Staff(data[0]['username'], data[0]['first_name'], data[0]['last_name'], data[0]['date_of_birth'], data[0]['works_for'])
                     return Response(0).addData(staff).json()
 
@@ -260,11 +259,9 @@ def customer_purchaseflights():
     return 'Ticket purchase successful!'
 
 
-
 @app.route('/customer_searchforflights', methods = ['GET', 'POST'])
 def customer_searchforflights():
     return 'a'
 
 if __name__ == '__main__':
     app.run()
-
