@@ -15,10 +15,11 @@ failed queries
 """
 
 from msilib.schema import Error
+from re import S
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 import pymysql.cursors
-from response import ErrorResponse
+from response import ErrorResponse, Response, Staff
 
 CUSTOMER = 1
 AGENT = 2
@@ -184,24 +185,20 @@ def login():
                 else:
                     return 'Login Success'
 
-
     elif type == STAFF:
-        print ("looking for staff")
         with cnx.cursor() as cur:
-            query = 'select username, password from airline_staff where username = \'{}\''.format(user)
-            print(query)
+            query = 'select * from airline_staff where username = \'{}\''.format(user)
             cur.execute(query)
             data = cur.fetchone()
 
             if not data:
-                error = 'User not found'
-                return error
+                return ErrorResponse('User not found').json()
             else:
                 if data[1] != password:
-                    error = 'Incorrect Password'
-                    return error
+                    return ErrorResponse('Incorrect password').json()
                 else:
-                    return 'Login Success'
+                    staff = Staff(data[0], data[2], data[3], data[4], data[5])
+                    return Response(0).addData(staff).json()
 
     elif type == AGENT:
         with cnx.cursor() as cur:

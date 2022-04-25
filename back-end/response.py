@@ -1,3 +1,5 @@
+from flask import jsonify
+
 class Response:
     def __init__(self, status):
         self.data = {'status': status}
@@ -26,17 +28,14 @@ class Response:
         return self
 
     def json(self):
-        return self.data
-
-    def __str__(self):
-        return str(self.data)
+        return jsonify(self.data)
 
 class Data:
-    def __init__(self):
-        self.data = {}
-
-    def __init__(self, k, v):
-        self.data = {k: v}
+    def __init__(self, k = None, v = None):
+        if(k == None and v == None):
+            self.data = {}
+        else:
+            self.data = {k: v}
 
     def addData(self, k, v):
         self.data[k] = v
