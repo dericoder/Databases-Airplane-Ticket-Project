@@ -14,8 +14,6 @@ failed queries
 }
 """
 
-from msilib.schema import Error
-from re import S
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 import pymysql.cursors
