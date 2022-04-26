@@ -3,8 +3,16 @@ import React from 'react';
 import { Form, Container, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom'
 import { Constants } from "../Utils";
+import { Cookies, withCookies } from 'react-cookie'
+import { instanceOf } from 'prop-types'
+import axios from 'axios'
+import md5 from 'md5'
 
 class RegisterClass extends React.Component {
+
+    static propTypes = {
+        cookies: instanceOf(Cookies).isRequired
+    };
 
     constructor(props) {
         super(props);
@@ -12,25 +20,54 @@ class RegisterClass extends React.Component {
         this.state = { 
             registerAs: Constants.CUSTOMER,
             validated: false,
-            confirm: ""
+            password: "",
+            confirm: "",
+            passwordValidated: true
         };
 
-        this.onSubmit = this.onSubmit.bind(this);
         this.register = this.register.bind(this);
     }
 
-    onSubmit(e) {
-        const form = e.currentTarget
-        if(form.checkValidity() === false) {
-            e.preventDefault();
-            e.stopPropagation();
+    register() {
+        let agentParams = {
+                type: this.state.registerAs,
+                email: this.state.user,
+                password: this.state.pass,
+                booking_agent_id: this.state.agent_id
+            };
+        
+        let staffParams = {
+            type: this.state.registerAs,
+            username: this.state.user,
+            password: this.state.pass,
+            first_name: this.state.fName,
+            last_name: this.state.lName,
+            works_for: this.state.airline,
+            date_of_birth: this.state.dob
         }
 
-        this.setState({validated: true});
-    }
+        let customerParams = {
+            type: this.state.registerAs,
+            email: this.state.user,
+            password: this.state.pass,
+            name: this.state.fName,
+            date_of_birth: this.state.dob,
+            building_number: this.state.building,
+            street: this.state.street,
+            city: this.state.city,
+            state: this.state.state,
+            phone_number: this.state.phone,
+            passport_number: this.state.passport,
+            passport_expiration: this.state.passportExpiry,
+        }
 
-    register() {
-        console.log("asdfsd")
+        axios.post('http://localhost:5000/register', null, {
+            params: this.state.registerAs === Constants.STAFF ? staffParams : this.state.registerAs === Constants.AGENT ? agentParams : customerParams
+        }).then((res) => {
+            console.log(res['data']);
+        }).catch((err) => {
+            console.log(err);
+        });
     }
 
     render() {
@@ -56,7 +93,7 @@ class RegisterClass extends React.Component {
                     </Form.Select>
                 </Form.Group>
                 <hr />
-                <Form noValidate validated={this.state.validated} onSubmit={(e) => this.onSubmit(e)}>
+                <Form noValidate validated={this.state.validated} >
                     <Form.Group className="mb-3 mt-3">
                         <Form.Label>{this.state.registerAs === Constants.STAFF ? "Username" : "Email"}</Form.Label>
                         <Form.Control placeholder={this.state.registerAs === Constants.STAFF ? "Enter your username" : "Enter your email"}
@@ -88,7 +125,11 @@ class RegisterClass extends React.Component {
                         <Form.Label>Password</Form.Label>
                         <Form.Control type="password" placeholder="Enter your password"
                             onChange={(e) => {
-                                this.setState({pass: e.target.value});
+                                this.setState({pass: md5(e.target.value)});
+                                if(md5(e.target.value) !== this.state.confirm)
+                                    this.setState({passwordValidated: false});
+                                else
+                                    this.setState({passwordValidated: true});
                             }} 
                             required/>
                     </Form.Group>
@@ -97,15 +138,15 @@ class RegisterClass extends React.Component {
                         <Form.Label>Confirm password</Form.Label>
                         <Form.Control type="password" placeholder="Confirm your password"
                             onChange={(e) => {
-                                this.setState({confirm: e.target.value});
-
-                                if(e.target.value !== this.state.pass)
-                                    this.setState({passValidated: false});
+                                if(md5(e.target.value) !== this.state.pass)
+                                    this.setState({passwordValidated: false});
                                 else
-                                    this.setState({passValidated: true});
+                                    this.setState({passwordValidated: true});
+
+                                this.setState({confirm: md5(e.target.value)});
                             }} 
                             required
-                            isInvalid={!this.state.passValidated && this.state.confirm !== ""}/>
+                            isInvalid={!this.state.passwordValidated && this.state.confirm !== ""}/>
                         <Form.Control.Feedback type="invalid">
                             Password not the same
                         </Form.Control.Feedback>
@@ -201,7 +242,16 @@ class RegisterClass extends React.Component {
                             required={this.state.registerAs === Constants.STAFF}/>
                     </Form.Group>
 
-                    <Button className="mb-3 mt-3" id="btnSubmit" type="submit">
+                    <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.AGENT}>
+                        <Form.Label>ID</Form.Label>
+                        <Form.Control placeholder="Enter your agent ID"
+                            onChange={(e) => {
+                                this.setState({agent_id: e.target.value});
+                            }} 
+                            required={this.state.registerAs === Constants.AGENT}/>
+                    </Form.Group>
+
+                    <Button className="mb-3 mt-3" id="btnSubmit" onMouseUp={() => {this.register()}}>
                         Register
                     </Button>
                 </Form>
@@ -217,7 +267,8 @@ class RegisterClass extends React.Component {
 }
 
 function Register() {
-    return <RegisterClass />
+    const RegisterCookies = withCookies(RegisterClass);
+    return <RegisterCookies />
 }
 
 export default Register;

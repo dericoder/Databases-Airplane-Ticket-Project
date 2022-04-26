@@ -40,19 +40,30 @@ class Data:
     def addData(self, k, v):
         self.data[k] = v
 
+    def json(self):
+        return jsonify(self.data)
+
 class ErrorResponse(Response):
-    def __init__(self, value):
-        super().__init__(-1)
+    def __init__(self, value, code = -1):
+        super().__init__(code)
         self.data['reason'] = value
 
 class Staff(Data):
+
+    USERNAME = 'username'
+    PASSWORD = 'password'
+    FNAME = 'first_name'
+    LNAME = 'last_name'
+    DOB = 'date_of_birth'
+    WORKS = 'works_for'
+
     def __init__(self, username, fName, lName, dob, works):
         super().__init__()
-        self.addData('username', username)
-        self.addData('first_name', fName)
-        self.addData('last_name', lName)
-        self.addData('date_of_birth', dob)
-        self.addData('works_for', works)
+        self.addData(Staff.USERNAME, username)
+        self.addData(Staff.FNAME, fName)
+        self.addData(Staff.LNAME, lName)
+        self.addData(Staff.DOB, dob)
+        self.addData(Staff.WORKS, works)
 
 class Agent(Data):
     def __init__(self, email, password, booking_agent_id):
@@ -62,6 +73,7 @@ class Agent(Data):
         self.addData('booking_agent_id', booking_agent_id)
 
 class Customer(Data):
+
     def __init__(self, email, name, password, building_number, street, city, state, phone_number, passport_number, passport_expiration, dob):
         super().__init__()
         self.addData('email', email)

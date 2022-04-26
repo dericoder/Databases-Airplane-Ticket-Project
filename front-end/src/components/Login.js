@@ -5,22 +5,30 @@ import Form from 'react-bootstrap/Form'
 import Button from 'react-bootstrap/Button'
 import Label from 'react-bootstrap/FloatingLabel'
 import axios from 'axios'
-import bcrypt from 'bcryptjs'
-import { Connection, Staff, Constants } from '../Utils' 
+import { Staff, Constants, Customer, Agent } from '../Utils' 
 import { Navigate, Link } from "react-router-dom"
+import { withCookies } from 'react-cookie'
+import { instanceOf } from 'prop-types'
+import { Cookies } from 'react-cookie'
+import md5 from 'md5'
 
 class LoginClass extends React.Component {
+
+    static propTypes = {
+        cookies: instanceOf(Cookies).isRequired
+    };
 
     constructor(props) {
         super(props);
 
         this.state = {
-            user: "",
+            username: "",
             pass: "",
             type: Constants.CUSTOMER,
             error: false,
             errorMessage: "",
-            loggedIn: Connection.loggedIn['status']
+            loggedIn: false,
+            user: this.props.allCookies['user']
         }
 
         this.onSubmit = this.onSubmit.bind(this);
@@ -28,7 +36,7 @@ class LoginClass extends React.Component {
     }
 
     onSubmit() {
-        if(this.state.user === "" || this.state.pass === "") {
+        if(this.state.username === "" || this.state.pass === "") {
             this.setState({error: true, errorMessage: "All fields must not be empty"});
             return;
         }
@@ -36,26 +44,39 @@ class LoginClass extends React.Component {
         axios.get('http://localhost:5000/login', {
             params: {
                 type: this.state.type,
-                user: this.state.user,
+                user: this.state.username,
                 password: this.state.pass 
             }
         }).then((res) => {
             let response = res['data']
             console.log(response);
+            let user = null;
             if(response[Constants.STATUS] === Constants.SUCCESS) {
-                Connection.loggedIn[Constants.STATUS] = true;
                 if(this.state.type === Constants.STAFF)
-                    Connection.loggedIn['user'] = new Staff(response[Constants.STAFF_USERNAME],
-                                                            response[Constants.STAFF_FNAME],
-                                                            response[Constants.STAFF_LNAME],
-                                                            response[Constants.STAFF_DOB],
-                                                            response[Constants.STAFF_WORKS]);
-                                    
-                Connection.loggedIn['type'] = this.state.type;
+                    user = new Staff(response[Constants.STAFF_USERNAME],
+                                    response[Constants.STAFF_FNAME],
+                                    response[Constants.STAFF_LNAME],
+                                    response[Constants.STAFF_DOB],
+                                    response[Constants.STAFF_WORKS]);
+                else if(this.state.type === Constants.CUSTOMER)
+                    user = new Customer(response[Constants.CUSTOMER_EMAIL],
+                                        response[Constants.CUSTOMER_NAME],
+                                        response[Constants.CUSTOMER_BUILDING],
+                                        response[Constants.CUSTOMER_STREET],
+                                        response[Constants.CUSTOMER_CITY],
+                                        response[Constants.CUSTOMER_STATE],
+                                        response[Constants.CUSTOMER_PHONE],
+                                        response[Constants.CUSTOMER_PASSPORT],
+                                        response[Constants.CUSTOMER_PASSPORT_EXPIRY],
+                                        response[Constants.CUSTOMER_PASSPORT_COUNTRY],
+                                        response[Constants.CUSTOMER_DOB]);
+                else if(this.state.type === Constants.AGENT)
+                        user = new Agent(response[Constants.AGENT_EMAIL], response[Constants.AGENT_ID]);
 
-                this.props.updateNavbar();
-                this.setState({loggedIn: true});
-            } else{
+                const { cookies } = this.props;
+                cookies.set('user', user);
+                this.setState({user: cookies['user']})
+            } else {
                 this.setState({error: true, errorMessage: response[Constants.REASON]});
             }
         }).catch(() => {
@@ -69,7 +90,7 @@ class LoginClass extends React.Component {
     }
 
     render() {
-        if(Connection.loggedIn[Constants.STATUS])
+        if(this.state.user !== 'null')
             return <Navigate to={{pathname: '/'}} />;
 
         return (
@@ -80,13 +101,13 @@ class LoginClass extends React.Component {
                 <Form>
                     <Form.Group className="mb-3 mt-3" controlId="formEmail">
                         <Form.Label>Email / Username</Form.Label>
-                        <Form.Control type="email" placeholder="Enter your email or username" onChange={(e) => this.setState({user: e.target.value})} />
+                        <Form.Control type="email" placeholder="Enter your email or username" onChange={(e) => this.setState({username: e.target.value})} />
                     </Form.Group>
                     <Form.Group className="mb-3" controlId="formPassword">
                         <Form.Label>Password</Form.Label>
                         <Form.Control type="password" placeholder="Enter your password"  
                         onChange={(e) => {
-                                this.setState({pass: e.target.value})
+                                this.setState({pass: md5(e.target.value)})
                             }
                         }/>
                     </Form.Group>
@@ -125,7 +146,8 @@ class LoginClass extends React.Component {
 }
 
 function Login(props) {
-    return <LoginClass updateNavbar={props.updateNavbar}/>;
+    const LoginCookies = withCookies(LoginClass);
+    return <LoginCookies updateNavbar={props.updateNavbar} />;
 }
 
-export default Login;
+export default withCookies(Login);
