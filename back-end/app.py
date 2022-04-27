@@ -19,6 +19,7 @@ from flask_cors import CORS
 import pymysql.cursors
 from datetime import date
 from response import ErrorResponse, Response, Staff, Customer, Agent, Data
+import matplotlib.pyplot as plt
 
 CUSTOMER = 1
 AGENT = 2
@@ -57,8 +58,7 @@ def public():
         cur.execute(query)
         data = cur.fetchall()
 
-    result = str(data)
-    return result
+    return {'status': 0, 'result': data}
 
 #REGISTER
 
@@ -70,18 +70,18 @@ def register():
     type = int(request.args['type'])
     if(type == CUSTOMER):
 
-        email = request.args.get('email')
-        name = request.args.get('name')
-        password = request.args.get('password')
-        building_number = request.args.get('building_number')
-        street = request.args.get('street')
-        city = request.args.get('city')
-        state = request.args.get('state')
-        phone_number = request.args.get('phone_number')
-        passport_number = request.args.get('passport_number')
-        passport_country = request.args.get('passport_country')
-        passport_expiration = request.args.get('passport_expiration')
-        date_of_birth = request.args.get('date_of_birth')
+        email = request.args.get(Customer.EMAIL)
+        name = request.args.get(Customer.NAME)
+        password = request.args.get(Customer.PASSWORD)
+        building_number = request.args.get(Customer.BUILDING_NUMBER)
+        street = request.args.get(Customer.STREET)
+        city = request.args.get(Customer.CITY)
+        state = request.args.get(Customer.STATE)
+        phone_number = request.args.get(Customer.PHONE)
+        passport_number = request.args.get(Customer.PASSPORT_NUMBER)
+        passport_country = request.args.get(Customer.PASSPORT_COUNTRY)
+        passport_expiration = request.args.get(Customer.PASSPORT_EXP)
+        date_of_birth = request.args.get(Customer.DOB)
         try:
             with cnx.cursor() as cur:
                 query = 'select * from customer where email = \'{}\''.format(email)
@@ -143,9 +143,9 @@ def register():
                     return ErrorResponse('Airline does not exist', -2).json()
 
     elif type == AGENT:
-        email = request.args.get('email')
-        password = request.args.get('password')
-        booking_agent_id = request.args.get('booking_agent_id')
+        email = request.args.get(Agent.EMAIL)
+        password = request.args.get(Agent.PASSWORD)
+        booking_agent_id = request.args.get(Agent.BOOKING_AGENT_ID)
 
         try:
             with cnx.cursor() as cur:
@@ -190,11 +190,11 @@ def login():
                 if data['password'] != password:
                     return ErrorResponse('Incorrect password').json()
                 else:
-                    session["customer"] = user
-                    customer = Customer(data['email'],data['name'],data['building_number'],
-                                        data['building_number'],data['street'],
-                                        data['city'],data['state'],data['phone_number'], data['passport_number'],
-                                        data['passport_expiration'],data['date_of_birth'])
+                    customer = Customer(data[Customer.EMAIL],data[Customer.NAME],data[Customer.BUILDING_NUMBER],
+                                        data[Customer.STREET], data[Customer.CITY], data[Customer.STATE],
+                                        data[Customer.PHONE], data[Customer.PASSPORT_NUMBER],
+                                        data[Customer.PASSPORT_EXP],data[Customer.DOB])
+                    session[data[Customer.EMAIL]] = Customer.data
                     return Response(0).addData(customer).json()
 
     elif type == STAFF:
@@ -209,7 +209,8 @@ def login():
                 if data[Staff.PASSWORD] != password:
                     return ErrorResponse('Incorrect password').json()
                 else:
-                    staff = Staff(data[Staff.USERNAME], data[Staff.FNAME], data[Staff.LNAME], data[Staff.DOB], data[Staff.WORKS])
+                    staff = Staff(data[Staff.USERNAME], data[Staff.FNAME], 
+                                    data[Staff.LNAME], data[Staff.DOB], data[Staff.WORKS])
                     session[data[Staff.USERNAME]] = staff.data
                     return Response(0).addData(staff).json()
 
@@ -225,8 +226,8 @@ def login():
                 if data['password'] != password:
                     return ErrorResponse('Incorrect password').json()
                 else:
-                    session["agent"] = user
-                    staff = Agent(data['email'], data['booking_agent_id'])
+                    staff = Agent(data[Agent.EMAIL], data[Agent.BOOKING_AGENT_ID])
+                    session[data[Agent.EMAIL]] = Agent.data
                     return Response(0).addData(staff).json()
 
 
@@ -246,24 +247,77 @@ def customer_viewmyflights():
 
 @app.route('/customer_purchasetickets', methods = ['GET', 'POST'])
 def customer_purchaseflights():
-    customer = session['customer']
-    with cnx.cursor() as cur:
-        query1 = "select flight.flight_num and ticket.ticket_id from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email = {customer} and flight.status = 'Upcoming'"
-        cur.execute(query1)
-        data = cur.fetchone()
-        if not data:
-            return 'No flights available'
-        else:
-            today = date.today()
-            today = today.strftime("%Y-%m-%d")
-            ticket_id = data[1] + 1
-            query2 = 'insert into purchases values ({ticket_id}, {customer}, null, {today}'
-            cur.execute(query2)
-        cnx.commit()
-        
-    return 'Ticket purchase successful!'
+    if request.method == 'POST':
+        customer = session['customer']
+        airline = request.args.get('airline')
+        flight_num = request.args.get('flight_num')
+
+        with cnx.cursor() as cur:
+            #look for upcoming flights that the customer has not bought yet
+            query1 = "select flight.flight_num, ticket.ticket_id from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != {customer} and flight.status = 'Upcoming'"
+            cur.execute(query1)
+            data = cur.fetchone()
+            if not data:
+                return 'No flights available'
+            else:
+                today = date.today()
+                today = today.strftime("%Y-%m-%d")
+                new_ticket_id = int(data[1]) + 1
+                query2 = 'insert into purchases values ({new_ticket_id}, {customer}, null, {today})'
+                cur.execute(query2)
+                query3 = 'insert into ticket values ({new_ticket_id}, {airline}, {flight_num})'
+                cur.execute(query3)
+            cnx.commit()
+            
+        return 'Ticket purchase successful!'
 
 
 @app.route('/customer_searchforflights', methods = ['GET', 'POST'])
 def customer_searchforflights():
-    return 'a'
+    criteria = request.args.get('criteria')
+    value = request.args.get('value')
+    if Staff.USERNAME in session:
+        with cnx.cursor() as cur:
+            query = "select permission_type from permission where username = '{}'".format(session['staff'])
+            cur.execute(query)
+            permission = cur.fetchone()
+            permissions = permission[0]
+    else:
+        permissions = None
+
+    if criteria == None:
+        if permissions != None:
+            with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+                query = "select * from flight"
+                cur.execute(query)
+                data = cur.fetchall()
+                return {'status':0, 'result': data}
+        else:       
+            with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+                query = "select * from flight where status = 'Upcoming'"
+                cur.execute(query)
+                data = cur.fetchall()
+                return {'status':0, 'result': data}
+    else:
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+                query1 = "select * from flight where status = 'Upcoming' and {criteria} = '{value}'"
+                cur.execute(query1)
+                data = cur.fetchall()
+                return {'status':0, 'result': data}
+
+@app.route('/customer_trackmyspending', methods = ['GET', 'POST'])
+def customer_trackmyspending():
+    if Customer.EMAIL in session:
+        name = request.args.get('name')
+        start = request.args.get('start_month')
+        end = request.args.get('end_month')
+
+        if not start or not end:
+            pass
+
+        elif start > end:
+            return ErrorResponse('Starting month cannot be later than ending month!').json()
+        
+        else:
+            pass
+
