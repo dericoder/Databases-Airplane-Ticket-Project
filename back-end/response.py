@@ -1,3 +1,4 @@
+from email.message import EmailMessage
 from flask import jsonify
 
 class Response:
@@ -66,24 +67,43 @@ class Staff(Data):
         self.addData(Staff.WORKS, works)
 
 class Agent(Data):
+
+    EMAIL = 'email'
+    PASSWORD = 'password'
+    BOOKING_AGENT_ID = 'booking_agent_id'
+
     def __init__(self, email, password, booking_agent_id):
         super().__init__()
-        self.addData('email', email)
-        self.addData('password', password)
-        self.addData('booking_agent_id', booking_agent_id)
+        self.addData(Agent.EMAIL, email)
+        self.addData(Agent.PASSWORD, password)
+        self.addData(Agent.BOOKING_AGENT_ID, booking_agent_id)
 
 class Customer(Data):
+    
+    EMAIL = 'email'
+    NAME = 'name'
+    PASSWORD = 'password'
+    BUILDING_NUMBER = 'building_number'
+    STREET = 'street'
+    CITY ='city'
+    STATE = 'state'
+    PHONE = 'phone_number'
+    PASSPORT_NUMBER = 'passport_number'
+    PASSPORT_COUNTRY = 'passport_country'
+    PASSPORT_EXP = 'passport_expiration'
+    DOB = 'date_of_birth'
 
-    def __init__(self, email, name, password, building_number, street, city, state, phone_number, passport_number, passport_expiration, dob):
+    def __init__(self, email, name, password, building_number, street, city, state, phone_number, passport_number, passport_country, passport_expiration, dob):
         super().__init__()
-        self.addData('email', email)
-        self.addData('name', name)
-        self.addData('password', password)
-        self.addData('building_number', building_number)
-        self.addData('street', street)
-        self.addData('city', city)
-        self.addData('state', state)
-        self.addData('phone_number', phone_number)
-        self.addData('passport_number', passport_number)
-        self.addData('passport_expiration', passport_expiration)
-        self.addData('date_of_birth', dob)
+        self.addData(Customer.EMAIL, email)
+        self.addData(Customer.NAME, name)
+        self.addData(Customer.PASSWORD, password)
+        self.addData(Customer.BUILDING_NUMBER, building_number)
+        self.addData(Customer.STREET, street)
+        self.addData(Customer.CITY, city)
+        self.addData(Customer.STATE, state)
+        self.addData(Customer.PHONE, phone_number)
+        self.addData(Customer.PASSPORT_NUMBER, passport_number)
+        self.addData(Customer.PASSPORT_COUNTRY, passport_country)
+        self.addData(Customer.PASSPORT_EXP, passport_expiration)
+        self.addData(Customer.DOB, dob)
