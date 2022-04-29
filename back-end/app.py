@@ -231,7 +231,6 @@ def login():
 
     return ErrorResponse('A server error occurred')
 
-
 #CUSTOMER USE CASES
 @app.route('/customer_viewmyflights', methods = ['GET','POST'])
 def customer_viewmyflights():
@@ -256,7 +255,7 @@ def customer_purchaseflights():
             today = date.today()
             today = today.strftime("%Y-%m-%d")
             ticket_id = data[1] + 1
-            query2 = 'insert into purchases values ({ticket_id}, {customer}, null, {today}'
+            query2 = f'insert into purchases values ({ticket_id}, {customer}, null, {today}'
             cur.execute(query2)
         cnx.commit()
         
