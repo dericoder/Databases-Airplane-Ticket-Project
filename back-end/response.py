@@ -66,10 +66,9 @@ class Staff(Data):
         self.addData(Staff.WORKS, works)
 
 class Agent(Data):
-    def __init__(self, email, password, booking_agent_id):
+    def __init__(self, email, booking_agent_id):
         super().__init__()
         self.addData('email', email)
-        self.addData('password', password)
         self.addData('booking_agent_id', booking_agent_id)
 
 class Customer(Data):

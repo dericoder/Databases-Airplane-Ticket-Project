@@ -22,8 +22,6 @@ class LoginClass extends React.Component {
         super(props);
 
         this.state = {
-            username: "",
-            pass: "",
             type: Constants.CUSTOMER,
             error: false,
             errorMessage: "",
@@ -32,15 +30,11 @@ class LoginClass extends React.Component {
         }
 
         this.onSubmit = this.onSubmit.bind(this);
-        this.encryptPassword = this.encryptPassword.bind(this);
-    }
+        this.login = this.login.bind(this);
+        this.validated = this.validated.bind(this);
+   }
 
-    onSubmit() {
-        if(this.state.username === "" || this.state.pass === "") {
-            this.setState({error: true, errorMessage: "All fields must not be empty"});
-            return;
-        }
-
+    login() {
         axios.get('http://localhost:5000/login', {
             params: {
                 type: this.state.type,
@@ -48,8 +42,7 @@ class LoginClass extends React.Component {
                 password: this.state.pass 
             }
         }).then((res) => {
-            let response = res['data']
-            console.log(response);
+            let response = res['data'];
             let user = null;
             if(response[Constants.STATUS] === Constants.SUCCESS) {
                 if(this.state.type === Constants.STAFF)
@@ -75,58 +68,85 @@ class LoginClass extends React.Component {
 
                 const { cookies } = this.props;
                 cookies.set('user', user);
-                this.setState({user: cookies['user']})
             } else {
-                this.setState({error: true, errorMessage: response[Constants.REASON]});
+                this.setState({error: true, errorMessage: response[Constants.REASON]})
             }
-        }).catch(() => {
+        }).catch((e) => {
             this.setState({error: true, errorMessage: "A server error occurred"})
         });
     }
 
-    encryptPassword(pass) {
-        if(pass === "")
+    validated() {
+        if(this.state.username === "" || this.state.username === undefined)
+            return false;
+
+        if(this.state.pass === md5("") || this.state.pass === undefined)
+            return false;
+
+        return true;
+    }
+
+    onSubmit() {
+        if(!this.validated()) {
+            this.setState({error: true, errorMessage: "Please check the fields"});
             return;
+        }
+        
+        this.login();
     }
 
     render() {
         if(this.state.user !== 'null')
-            return <Navigate to={{pathname: '/'}} />;
+            return <Navigate to={{pathname: '/profile'}} />;
 
         return (
             <Container id="form">
                 <Label className="mt-3 notification-error" hidden={!this.state.error}>
                     {this.state.errorMessage}
                 </Label>
+
+                <Form.Group className="mt-3 mb-3" controlId="formUserType">
+                    <Form.Label>Login as</Form.Label>
+                    <Form.Select onChange={(e) => {
+                        if(e.target.value === "Airline staff")
+                            this.setState({type: Constants.STAFF});
+                        else if(e.target.value === "Customer") 
+                            this.setState({type: Constants.CUSTOMER});
+                        else if(e.target.value === "Booking agent")
+                            this.setState({type: Constants.AGENT});
+                    }}>
+                        <option>Customer</option>
+                        <option>Airline staff</option>
+                        <option>Booking agent</option>
+                    </Form.Select>
+                </Form.Group>
+                <hr />
                 <Form>
-                    <Form.Group className="mb-3 mt-3" controlId="formEmail">
+                    <Form.Group className="mb-3" controlId="formEmail">
                         <Form.Label>Email / Username</Form.Label>
-                        <Form.Control type="email" placeholder="Enter your email or username" onChange={(e) => this.setState({username: e.target.value})} />
+                        <Form.Control type="email" placeholder="Enter your email or username" 
+                                    onChange={(e) => {
+                                        this.setState({username: e.target.value});
+                                    }} 
+                                    required 
+                                    isInvalid={this.state.username === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
-                    <Form.Group className="mb-3" controlId="formPassword">
+                    <Form.Group className="mb-3" >
                         <Form.Label>Password</Form.Label>
                         <Form.Control type="password" placeholder="Enter your password"  
-                        onChange={(e) => {
-                                this.setState({pass: md5(e.target.value)})
-                            }
-                        }/>
+                                    onChange={(e) => {
+                                        this.setState({pass: md5(e.target.value)})
+                                    }}
+                                    required 
+                                    isInvalid={this.state.pass === md5("")} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
-                    <Form.Group className="mb-3" controlId="formUserType">
-                        <Form.Label>Login as</Form.Label>
-                        <Form.Select onChange={(e) => {
-                            if(e.target.value === "Airline staff")
-                                this.setState({type: Constants.STAFF});
-                            else if(e.target.value === "Customer") 
-                                this.setState({type: Constants.CUSTOMER});
-                            else if(e.target.value === "Booking agent")
-                                this.setState({type: Constants.AGENT});
-                        }}>
-                            <option>Customer</option>
-                            <option>Airline staff</option>
-                            <option>Booking agent</option>
-                        </Form.Select>
-                    </Form.Group>
-                    <Button className="mb-3 mt-3" id="btnSubmit" onMouseUp={() => {this.onSubmit()}}>
+                    <Button className="mb-3 mt-3" id="btnSubmit" onMouseUp={this.onSubmit}>
                         Login
                     </Button>
                     <hr />

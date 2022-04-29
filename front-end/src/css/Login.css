@@ -18,13 +18,27 @@
     padding-top: 20px;
     padding-bottom: 20px;
     height: fit-content;
-    border: 1px solid rgb(255, 191, 191);
+    border: 1px solid rgb(255, 190, 190);
     background-color: rgb(255, 210, 210);
     border-radius: 10px;
     display: flex;
     justify-content: center;
     align-items: center;
     color: rgb(151, 102, 102);
+}
+
+.notification-registered {
+    width: 100%;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    height: fit-content;
+    border: 1px solid rgb(153, 255, 153);
+    background-color: rgb(179, 255, 189);
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: rgb(66, 114, 68);
 }
 
 #footer {

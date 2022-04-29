@@ -93,7 +93,6 @@ def register():
                     return ErrorResponse(err).json()
                 else:
                     ins = 'insert into customer values (\'{}\', \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\', \'{}\')'.format(email, name, password, building_number, street, city, state, phone_number, passport_number, passport_expiration, passport_country, date_of_birth)
-                    print(ins)
                     
                     with cnx.cursor() as cur:
                         cur.execute(ins)
@@ -214,7 +213,7 @@ def login():
                     return Response(0).addData(staff).json()
 
     elif type == AGENT:
-        with cnx.cursor() as cur:
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
             query = 'select * from booking_agent where email = \'{}\''.format(user)
             cur.execute(query)
             data = cur.fetchone()
@@ -226,7 +225,7 @@ def login():
                     return ErrorResponse('Incorrect password').json()
                 else:
                     session["agent"] = user
-                    staff = Agent(data['email'], data['booking_agent_id'])
+                    staff = Agent(data['email'], data['id'])
                     return Response(0).addData(staff).json()
 
 

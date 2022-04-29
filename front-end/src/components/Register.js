@@ -1,7 +1,7 @@
 import "../css/Register.css";
 import React from 'react';
-import { Form, Container, Button } from 'react-bootstrap';
-import { Link } from 'react-router-dom'
+import { Form, Container, Button, FloatingLabel as Label } from 'react-bootstrap';
+import { Link, Navigate } from 'react-router-dom'
 import { Constants } from "../Utils";
 import { Cookies, withCookies } from 'react-cookie'
 import { instanceOf } from 'prop-types'
@@ -20,12 +20,19 @@ class RegisterClass extends React.Component {
         this.state = { 
             registerAs: Constants.CUSTOMER,
             validated: false,
-            password: "",
+            pass: "",
             confirm: "",
-            passwordValidated: true
+            passwordValidated: true,
+            error: false,
+            errorMessage: "",
+            registered: this.props.allCookies['registered']
         };
 
         this.register = this.register.bind(this);
+        this.onSubmit = this.onSubmit.bind(this);
+
+        if(this.props.allCookies['registered'] !== undefined)
+            this.props.cookies.remove('registered');
     }
 
     register() {
@@ -63,19 +70,27 @@ class RegisterClass extends React.Component {
 
         axios.post('http://localhost:5000/register', null, {
             params: this.state.registerAs === Constants.STAFF ? staffParams : this.state.registerAs === Constants.AGENT ? agentParams : customerParams
-        }).then((res) => {
-            console.log(res['data']);
+        }).then(() => {
+            const { cookies } = this.props;
+            cookies.set('registered', 'true');
         }).catch((err) => {
-            console.log(err);
+            this.setState({error: true, errorMessage: "A server error occurred"});
         });
     }
 
+    onSubmit() {
+        this.register();
+    }
+
     render() {
-        if(this.state.validated)
-            this.register();
+        if(this.state.registered === 'true')
+            return <Navigate to={{pathname: '/login'}}/>
 
         return (
             <Container id="form">
+                <Label className="mt-3 notification-error" hidden={!this.state.error}>
+                    {this.state.errorMessage}
+                </Label>
                 <Form.Group className="mt-3">
                     <Form.Label>Register as</Form.Label>
                     <Form.Select onChange={(e) => {
@@ -93,14 +108,18 @@ class RegisterClass extends React.Component {
                     </Form.Select>
                 </Form.Group>
                 <hr />
-                <Form noValidate validated={this.state.validated} >
+                <Form>
                     <Form.Group className="mb-3 mt-3">
                         <Form.Label>{this.state.registerAs === Constants.STAFF ? "Username" : "Email"}</Form.Label>
                         <Form.Control placeholder={this.state.registerAs === Constants.STAFF ? "Enter your username" : "Enter your email"}
                             onChange={(e) => {
                                 this.setState({user: e.target.value});
                             }} 
-                            required/>
+                            required
+                            isInvalid={this.state.user === ""}/>
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs === Constants.AGENT}>
@@ -109,7 +128,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({fName: e.target.value});
                             }}
-                            required={this.state.registerAs !== Constants.AGENT}/>
+                            required={this.state.registerAs !== Constants.AGENT}
+                            isInvalid={this.state.fName === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.STAFF}>
@@ -118,7 +141,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({lName: e.target.value});
                             }} 
-                            required={this.state.registerAs === Constants.STAFF}/>
+                            required={this.state.registerAs === Constants.STAFF}
+                            isInvalid={this.state.lName === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3">
@@ -131,7 +158,11 @@ class RegisterClass extends React.Component {
                                 else
                                     this.setState({passwordValidated: true});
                             }} 
-                            required/>
+                            required
+                            isInvalid={this.state.pass === md5("") } />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3">
@@ -145,10 +176,10 @@ class RegisterClass extends React.Component {
 
                                 this.setState({confirm: md5(e.target.value)});
                             }} 
-                            required
-                            isInvalid={!this.state.passwordValidated && this.state.confirm !== ""}/>
+                            isInvalid={!this.state.passwordValidated && this.state.confirm !== ""}
+                            required/>
                         <Form.Control.Feedback type="invalid">
-                            Password not the same
+                            Passwords do not match
                         </Form.Control.Feedback>
                     </Form.Group>
 
@@ -158,7 +189,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({building: e.target.value});
                             }} 
-                            required={this.state.registerAs === Constants.CUSTOMER}/>
+                            required={this.state.registerAs === Constants.CUSTOMER}
+                            isInvalid={this.state.building <= 0 || this.state.building === ""}/>
+                        <Form.Control.Feedback type="invalid">
+                            Building number cannot be below 0 or empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.CUSTOMER}>
@@ -167,7 +202,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({street: e.target.value});
                             }}
-                            required={this.state.registerAs === Constants.CUSTOMER}/>
+                            required={this.state.registerAs === Constants.CUSTOMER}
+                            isInvalid={this.state.street === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.CUSTOMER}>
@@ -176,7 +215,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({city: e.target.value});
                             }}
-                            required={this.state.registerAs === Constants.CUSTOMER}/>
+                            required={this.state.registerAs === Constants.CUSTOMER}
+                            isInvalid={this.state.city === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.CUSTOMER}>
@@ -185,7 +228,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({state: e.target.value});
                             }} 
-                            required={this.state.registerAs === Constants.CUSTOMER}/>
+                            required={this.state.registerAs === Constants.CUSTOMER}
+                            isInvalid={this.state.state === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.CUSTOMER}>
@@ -194,7 +241,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({phone: e.target.value});
                             }} 
-                            required={this.state.registerAs === Constants.CUSTOMER}/>
+                            required={this.state.registerAs === Constants.CUSTOMER}
+                            isInvalid={this.state.phone === "" || this.state.phone <= 0} />
+                        <Form.Control.Feedback type="invalid">
+                            Invalid phone number
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.CUSTOMER}>
@@ -203,7 +254,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({passport: e.target.value});
                             }}
-                            required={this.state.registerAs === Constants.CUSTOMER}/>
+                            required={this.state.registerAs === Constants.CUSTOMER}
+                            isInvalid={this.state.passport === "" || this.state.passport <= 0} />
+                        <Form.Control.Feedback type="invalid">
+                            Invalid passport number
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.CUSTOMER}>
@@ -212,7 +267,10 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({passportExpiry: e.target.value});
                             }}
-                            required={this.state.registerAs === Constants.CUSTOMER}/>
+                            required={this.state.registerAs === Constants.CUSTOMER} />
+                        <Form.Control.Feedback type="invalid">
+                            Please pick a date
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.CUSTOMER}>
@@ -221,7 +279,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({passportCountry: e.target.value});
                             }}
-                            required={this.state.registerAs === Constants.CUSTOMER}/>
+                            required={this.state.registerAs === Constants.CUSTOMER}
+                            isInvalid={this.state.passportCountry === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.CUSTOMER && this.state.registerAs !== Constants.STAFF}>
@@ -229,8 +291,11 @@ class RegisterClass extends React.Component {
                         <Form.Control type="date"
                             onChange={(e) => {
                                 this.setState({dob: e.target.value});
-                            }} 
-                            required={this.state.registerAs !== Constants.AGENT}/>
+                            }}
+                            required={this.state.registerAs !== Constants.AGENT} />
+                        <Form.Control.Feedback type="invalid">
+                            Please pick a date
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.STAFF}>
@@ -239,7 +304,11 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({airline: e.target.value});
                             }} 
-                            required={this.state.registerAs === Constants.STAFF}/>
+                            required={this.state.registerAs === Constants.STAFF}
+                            isInvalid={this.state.airline === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-3" hidden={this.state.registerAs !== Constants.AGENT}>
@@ -248,10 +317,14 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({agent_id: e.target.value});
                             }} 
-                            required={this.state.registerAs === Constants.AGENT}/>
+                            required={this.state.registerAs === Constants.AGENT}
+                            isInvalid={this.state.agent_id === ""} />
+                        <Form.Control.Feedback type="invalid">
+                            This field must not be empty
+                        </Form.Control.Feedback>
                     </Form.Group>
 
-                    <Button className="mb-3 mt-3" id="btnSubmit" onMouseUp={() => {this.register()}}>
+                    <Button className="mb-3 mt-3" id="btnSubmit" onMouseUp={() => {this.onSubmit()}}>
                         Register
                     </Button>
                 </Form>

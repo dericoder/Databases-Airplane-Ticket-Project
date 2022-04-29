@@ -55,7 +55,6 @@ function App() {
 
   if(cookies['user'] === undefined)
     setCookie('user', null);
-
   const NavBar = withCookies(Bar);
 
   return (
