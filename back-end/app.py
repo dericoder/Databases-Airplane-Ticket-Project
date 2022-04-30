@@ -237,7 +237,7 @@ def login():
 #CUSTOMER USE CASES
 @app.route('/customer_viewmyflights', methods = ['GET','POST'])
 def customer_viewmyflights():
-    customer = session['customer']
+    customer = session[Customer.EMAIL]
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:        
         query = f"select distinct * from flight natural join purchases natural join ticket where purchases.customer_email = {customer} and flight.status = 'Upcoming'"
         cur.execute(query)
@@ -309,11 +309,12 @@ def customer_searchforflights():
 def customer_trackmyspending():
     if Customer.EMAIL in session:
         email = request.args.get('email')
-        start = request.args.get('start_month')
-        end = request.args.get('end_month')
-        months = int(end)-int(start)
+        start_year = int(request.args.get('start_year'))
+        end_year = int(request.args.get('end_year'))
+        start_month = int(request.args.get('start_month'))
+        end_month = int(request.args.get('end_month'))
 
-        if not start or not end:
+        if not start_month or not end_month:
             with cnx.cursor() as cur:
                 query1 = f"select customer_email, sum(price) from purchases natural join ticket natural join flight where customer_email = {email} and purchase_date between date_sub(date(now()), interval 1 year) and date(now());"
                 cur.execute(query1)
@@ -340,12 +341,52 @@ def customer_trackmyspending():
                 ax1.set_xlabel('Month')
                 ax1.set_ylabel('Spending')
                 
-                return 'anjing'
+                return {'status': 0, 'result': [data1, month, monthly_spending]}
 
 
-        elif start > end:
+        elif start_month > end_month or start_year > end_year:
             return ErrorResponse('Starting month cannot be later than ending month!').json()
         
         else:
-            pass
+            with cnx.cursor() as cur:
+                query1 = f"select customer_email, sum(price) from purchases natural join ticket natural join flight where customer_email = {email} and purchase_date between date('{start_year}-0{start_month}-01') and date('{end_year}-0{end_month}-01');"
+                cur.execute(query1)
+                data1 = cur.fetchone()
+                if not data1:
+                    data1 = "0"
+                else:
+                    data1 = data1[0]
+
+                month = []
+                monthly_spending = []
+                
+                interval = end_month-start_month
+                for i in range(interval):
+                    month.append(interval+1)
+
+                k = 0
+                query2 = f"select sum(price) from ticket natural join purchases natural join flight where customer_email= {email} AND year(purchase_date) = year(date('{start_year}-0{start_month+k}-01')) and month(purchase_date)= month(date('{end_year}-0{end_month+k}-01'))"
+
+                for i in range(interval):
+                    with cnx.cursor() as cursor:
+                        cursor.execute(query2)
+                        data2 = cursor.fetchone()
+                        k += 1 
+                        if data2[0]:
+                            monthly_spending[i] = int(data2[0])
+                fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
+                ax1.bar(month, height=monthly_spending)
+                ax1.set_title(f'Monthly spending of {email}')
+                ax1.set_xlabel('Month')
+                ax1.set_ylabel('Spending')
+                    
+                return {'status': 0, 'result': [data1, month, monthly_spending]}
+
+@app.route('/customer_logout')
+def customer_logout():
+    session.pop(Customer.EMAIL)
+    
+    return "Goodbye!"
+
+
 
