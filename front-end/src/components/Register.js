@@ -20,22 +20,38 @@ class RegisterClass extends React.Component {
         this.state = { 
             registerAs: Constants.CUSTOMER,
             validated: false,
-            pass: "",
-            confirm: "",
             passwordValidated: true,
             error: false,
             errorMessage: "",
+            userValidated: true,
+            fNameValidated: true,
+            lNameValidated: true,
+            passValidated: true,
+            confirmValidated: true,
+            dobValidated: true,
+            buildingValidated: true,
+            streetValidated: true,
+            cityValidated: true,
+            stateValidated: true,
+            phoneValidated: true,
+            passportValidated: true,
+            passportExpiryValidated: true,
+            passportCountryValidated: true,
+            airlineValidated: true,
+            agentIdValidated: true,
             registered: this.props.allCookies['registered']
         };
 
         this.register = this.register.bind(this);
         this.onSubmit = this.onSubmit.bind(this);
+        this.validated = this.validated.bind(this);
 
         if(this.props.allCookies['registered'] !== undefined)
             this.props.cookies.remove('registered');
     }
 
     register() {
+        console.log('registering')
         let agentParams = {
                 type: this.state.registerAs,
                 email: this.state.user,
@@ -78,7 +94,115 @@ class RegisterClass extends React.Component {
         });
     }
 
+    validated() {
+        let fields = {
+            userValidated: true,
+            fNameValidated: true,
+            lNameValidated: true,
+            passValidated: true,
+            confirmValidated: true,
+            dobValidated: true,
+            buildingValidated: true,
+            streetValidated: true,
+            cityValidated: true,
+            stateValidated: true,
+            phoneValidated: true,
+            passportValidated: true,
+            passportExpiryValidated: true,
+            passportCountryValidated: true,
+            airlineValidated: true,
+            agentIdValidated: true,
+        }
+
+        let valid = true;
+
+        if(this.state.user === "" || this.state.user === undefined) {
+            fields.userValidated = false;
+            valid = false;
+        }
+
+        if(this.state.pass === md5("") || this.state.pass === undefined) {
+            fields.passValidated = false;
+            valid = false;
+        }
+
+        if(this.state.confirm === undefined || this.state.pass !== this.state.confirm) {
+            fields.confirmValidated = false;
+            valid = false;
+        }
+
+        if(this.state.registerAs === Constants.STAFF) {
+            if(this.state.fName === "" || this.state.fName === undefined) {
+                fields.fNameValidated = false;
+                valid = false;
+            }
+            if(this.state.lName === "" || this.state.lName === undefined) {
+                fields.lNameValidated = false;
+                valid = false;
+            }
+            if(this.state.airline === "" || this.state.airline === undefined) {
+                fields.airlineValidated = false;
+                valid = false;
+            }
+        } else if(this.state.registerAs === Constants.AGENT) {
+            if(this.state.agent_id === "" || this.state.agent_id === undefined) {
+                fields.agentIdValidated = false;
+                valid = false;
+            }
+        } else if(this.state.registerAs === Constants.CUSTOMER) {
+            if(this.state.fName === "" || this.state.fName === undefined) {
+                fields.fNameValidated = false;
+                valid = false;
+            }
+            if(this.state.dob === "" || this.state.dob === undefined) {
+                fields.dobValidated = false;
+                valid = false;
+            }
+            if(this.state.building === "" || this.state.building === undefined || this.state.building <= 0)  {
+                fields.buildingValidated = false;
+                valid = false;
+            }
+            if(this.state.street === "" || this.state.street === undefined) {
+                fields.streetValidated = false;
+                valid = false;
+            }
+            if(this.state.city === "" || this.state.city === undefined) {
+                fields.cityValidated = false;
+                valid = false;
+            }
+            if(this.state.state === "" || this.state.state === undefined) {
+                fields.stateValidated = false;
+                valid = false;
+            }
+            if(this.state.passport === "" || this.state.passport === undefined) {
+                fields.passportValidated = false;
+                valid = false;
+            }
+            if(this.state.passportExpiry === "" || this.state.passportExpiry === undefined) {
+                fields.passportExpiryValidated = false;
+                valid = false;
+            }
+            if(this.state.passportCountry === "" || this.state.passportCountry === undefined) {
+                fields.passportCountryValidated = false;
+                valid = false;
+            }
+            if(this.state.phone === "" || this.state.phone === undefined || this.state.phone <= 0) {
+                fields.phoneValidated = false;
+                valid = false;
+            }
+        }
+
+        this.setState(fields);
+
+        return valid;
+    }
+
     onSubmit() {
+        if(!this.validated()) {
+            this.setState({error: true, errorMessage: "Please check the fields"});
+            return;
+        }
+        
         this.register();
     }
 
@@ -116,7 +240,7 @@ class RegisterClass extends React.Component {
                                 this.setState({user: e.target.value});
                             }} 
                             required
-                            isInvalid={this.state.user === ""}/>
+                            isInvalid={this.state.user === "" || !this.state.userValidated}/>
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -129,7 +253,7 @@ class RegisterClass extends React.Component {
                                 this.setState({fName: e.target.value});
                             }}
                             required={this.state.registerAs !== Constants.AGENT}
-                            isInvalid={this.state.fName === ""} />
+                            isInvalid={this.state.fName === "" || !this.state.fNameValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -142,7 +266,7 @@ class RegisterClass extends React.Component {
                                 this.setState({lName: e.target.value});
                             }} 
                             required={this.state.registerAs === Constants.STAFF}
-                            isInvalid={this.state.lName === ""} />
+                            isInvalid={this.state.lName === "" || !this.state.lNameValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -159,7 +283,7 @@ class RegisterClass extends React.Component {
                                     this.setState({passwordValidated: true});
                             }} 
                             required
-                            isInvalid={this.state.pass === md5("") } />
+                            isInvalid={this.state.pass === md5("") && !this.state.passValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -176,7 +300,7 @@ class RegisterClass extends React.Component {
 
                                 this.setState({confirm: md5(e.target.value)});
                             }} 
-                            isInvalid={!this.state.passwordValidated && this.state.confirm !== ""}
+                            isInvalid={(!this.state.passwordValidated && this.state.confirm !== "") || (!this.state.confirmValidated && !this.state.passwordValidated)}
                             required/>
                         <Form.Control.Feedback type="invalid">
                             Passwords do not match
@@ -190,7 +314,7 @@ class RegisterClass extends React.Component {
                                 this.setState({building: e.target.value});
                             }} 
                             required={this.state.registerAs === Constants.CUSTOMER}
-                            isInvalid={this.state.building <= 0 || this.state.building === ""}/>
+                            isInvalid={this.state.building <= 0 || this.state.building === "" || !this.state.buildingValidated}/>
                         <Form.Control.Feedback type="invalid">
                             Building number cannot be below 0 or empty
                         </Form.Control.Feedback>
@@ -203,7 +327,7 @@ class RegisterClass extends React.Component {
                                 this.setState({street: e.target.value});
                             }}
                             required={this.state.registerAs === Constants.CUSTOMER}
-                            isInvalid={this.state.street === ""} />
+                            isInvalid={this.state.street === "" || !this.state.streetValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -216,7 +340,7 @@ class RegisterClass extends React.Component {
                                 this.setState({city: e.target.value});
                             }}
                             required={this.state.registerAs === Constants.CUSTOMER}
-                            isInvalid={this.state.city === ""} />
+                            isInvalid={this.state.city === "" || !this.state.cityValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -229,7 +353,7 @@ class RegisterClass extends React.Component {
                                 this.setState({state: e.target.value});
                             }} 
                             required={this.state.registerAs === Constants.CUSTOMER}
-                            isInvalid={this.state.state === ""} />
+                            isInvalid={this.state.state === "" || !this.state.stateValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -242,7 +366,7 @@ class RegisterClass extends React.Component {
                                 this.setState({phone: e.target.value});
                             }} 
                             required={this.state.registerAs === Constants.CUSTOMER}
-                            isInvalid={this.state.phone === "" || this.state.phone <= 0} />
+                            isInvalid={this.state.phone === "" || this.state.phone <= 0 || !this.state.phoneValidated} />
                         <Form.Control.Feedback type="invalid">
                             Invalid phone number
                         </Form.Control.Feedback>
@@ -255,7 +379,7 @@ class RegisterClass extends React.Component {
                                 this.setState({passport: e.target.value});
                             }}
                             required={this.state.registerAs === Constants.CUSTOMER}
-                            isInvalid={this.state.passport === "" || this.state.passport <= 0} />
+                            isInvalid={this.state.passport === "" || !this.state.passportValidated} />
                         <Form.Control.Feedback type="invalid">
                             Invalid passport number
                         </Form.Control.Feedback>
@@ -267,7 +391,8 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({passportExpiry: e.target.value});
                             }}
-                            required={this.state.registerAs === Constants.CUSTOMER} />
+                            required={this.state.registerAs === Constants.CUSTOMER} 
+                            isInvalid={!this.state.passportExpiryValidated} />
                         <Form.Control.Feedback type="invalid">
                             Please pick a date
                         </Form.Control.Feedback>
@@ -280,7 +405,7 @@ class RegisterClass extends React.Component {
                                 this.setState({passportCountry: e.target.value});
                             }}
                             required={this.state.registerAs === Constants.CUSTOMER}
-                            isInvalid={this.state.passportCountry === ""} />
+                            isInvalid={this.state.passportCountry === "" || !this.state.passportCountryValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -292,7 +417,8 @@ class RegisterClass extends React.Component {
                             onChange={(e) => {
                                 this.setState({dob: e.target.value});
                             }}
-                            required={this.state.registerAs !== Constants.AGENT} />
+                            required={this.state.registerAs !== Constants.AGENT}
+                            isInvalid={!this.state.dobValidated} />
                         <Form.Control.Feedback type="invalid">
                             Please pick a date
                         </Form.Control.Feedback>
@@ -305,7 +431,7 @@ class RegisterClass extends React.Component {
                                 this.setState({airline: e.target.value});
                             }} 
                             required={this.state.registerAs === Constants.STAFF}
-                            isInvalid={this.state.airline === ""} />
+                            isInvalid={this.state.airline === "" || this.state.airlineValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
@@ -318,7 +444,7 @@ class RegisterClass extends React.Component {
                                 this.setState({agent_id: e.target.value});
                             }} 
                             required={this.state.registerAs === Constants.AGENT}
-                            isInvalid={this.state.agent_id === ""} />
+                            isInvalid={this.state.agent_id === "" || !this.state.agentIdValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>
