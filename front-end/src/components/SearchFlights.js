@@ -39,6 +39,15 @@ class SearchClass extends React.Component {
     }
 
     search() {
+        axios.get("http://localhost:5000/search", {
+            params: {
+                arrival: this.state.arrival,
+                departure: this.state.departure,
+                date: this.state.date
+            }
+        }).then((res) => {
+            console.log(res);
+        })
     }
 
     validate() {
