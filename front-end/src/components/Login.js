@@ -68,6 +68,7 @@ class LoginClass extends React.Component {
 
                 const { cookies } = this.props;
                 cookies.set('user', user);
+                cookies.set('type', this.state.type);
             } else {
                 this.setState({error: true, errorMessage: response[Constants.REASON]})
             }

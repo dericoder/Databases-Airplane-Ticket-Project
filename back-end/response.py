@@ -72,10 +72,9 @@ class Agent(Data):
     PASSWORD = 'password'
     BOOKING_AGENT_ID = 'booking_agent_id'
 
-    def __init__(self, email, password, booking_agent_id):
+    def __init__(self, email, booking_agent_id):
         super().__init__()
         self.addData(Agent.EMAIL, email)
-        self.addData(Agent.PASSWORD, password)
         self.addData(Agent.BOOKING_AGENT_ID, booking_agent_id)
 
 class Customer(Data):
@@ -93,11 +92,10 @@ class Customer(Data):
     PASSPORT_EXP = 'passport_expiration'
     DOB = 'date_of_birth'
 
-    def __init__(self, email, name, password, building_number, street, city, state, phone_number, passport_number, passport_country, passport_expiration, dob):
+    def __init__(self, email, name, building_number, street, city, state, phone_number, passport_number, passport_country, passport_expiration, dob):
         super().__init__()
         self.addData(Customer.EMAIL, email)
         self.addData(Customer.NAME, name)
-        self.addData(Customer.PASSWORD, password)
         self.addData(Customer.BUILDING_NUMBER, building_number)
         self.addData(Customer.STREET, street)
         self.addData(Customer.CITY, city)

@@ -70,9 +70,40 @@ class Agent {
     }
 }
 
+class Airports {
+    static JFK = {airport: "JFK", city: "New York City", label: "NYC, JFK"}
+    static LA_GUARDIA = {airport: "La Guardia", city: "New York City", label: "NYC, La Guardia"}
+    static SDF = {airport: "Louisville SDF", city: "Louisville", label: "Louisville, SDF"}
+    static O_HARE = {airport: "O'Hare", city: "Chicago", label: "Chicago, O'Hare"}
+    static SFO = {airport: "SFO", city: "San Francisco", label: "San Francisco, SFO"}
+
+    static getAirportList() {
+        return [
+            Airports.JFK,
+            Airports.LA_GUARDIA,
+            Airports.SDF,
+            Airports.O_HARE,
+            Airports.SFO
+        ];
+    }
+
+    static has(airport) {
+        let found = false;
+
+        Airports.getAirportList().forEach((data) => {
+            if(airport.toLowerCase() === data.airport.toLowerCase()){
+                found = true;
+            }
+        });
+
+        return found;
+    }
+}
+
 export {
     Constants,
     Staff,
     Customer,
-    Agent
+    Agent,
+    Airports
 }

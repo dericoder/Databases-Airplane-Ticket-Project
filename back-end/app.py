@@ -47,14 +47,19 @@ def customer_search():
 def foo():
     return "test"
 
-@app.route("/test")
+@app.route("/airports")
 def test():
-    return "<h1>test</h1>"
+    with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+        query = "select * from airport"
+        cur.execute(query)
+        data = cur.fetchall()
+
+    return jsonify(data)
 
 @app.route('/public')
 def public():
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-        query = "select * from flight where status = 'Upcoming'"
+        query = "select * from flight where status = \'Upcoming\'"
         cur.execute(query)
         data = cur.fetchall()
 
@@ -191,9 +196,9 @@ def login():
                 else:
                     customer = Customer(data[Customer.EMAIL],data[Customer.NAME],data[Customer.BUILDING_NUMBER],
                                         data[Customer.STREET], data[Customer.CITY], data[Customer.STATE],
-                                        data[Customer.PHONE], data[Customer.PASSPORT_NUMBER],
+                                        data[Customer.PHONE], data[Customer.PASSPORT_NUMBER], data[Customer.PASSPORT_COUNTRY],
                                         data[Customer.PASSPORT_EXP],data[Customer.DOB])
-                    session[data[Customer.EMAIL]] = Customer.data
+                    session[data[Customer.EMAIL]] = customer.data
                     return Response(0).addData(customer).json()
 
     elif type == STAFF:
@@ -225,9 +230,9 @@ def login():
                 if data['password'] != password:
                     return ErrorResponse('Incorrect password').json()
                 else:
-                    staff = Agent(data[Agent.EMAIL], data[Agent.BOOKING_AGENT_ID])
-                    session[data[Agent.EMAIL]] = Agent.data
-                    return Response(0).addData(staff).json()
+                    agent = Agent(data[Agent.EMAIL], data[Agent.BOOKING_AGENT_ID])
+                    session[data[Agent.EMAIL]] = agent.data
+                    return Response(0).addData(agent).json()
 
 
     return ErrorResponse('A server error occurred')
@@ -268,7 +273,6 @@ def customer_purchaseflights():
             cnx.commit()
             
         return 'Ticket purchase successful!'
-
 
 @app.route('/customer_searchforflights', methods = ['GET', 'POST'])
 def customer_searchforflights():
@@ -386,5 +390,7 @@ def customer_logout():
     
     return "Goodbye!"
 
-
-
+@app.route('/logout', methods=['GET'])
+def logout():
+    user = request.args['user']
+    session.pop(user)
