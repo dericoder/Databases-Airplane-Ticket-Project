@@ -31,9 +31,9 @@ CORS(app)
 
 cnx = pymysql.connect(host='localhost',
 					port=3306,
-					user='Admin',
-                    password='Admin123.',
-                    db='db_project')
+					user='root',
+                    password='Root123.',
+                    db='finalproject')
 
 @app.route("/search")
 def search():
@@ -49,7 +49,13 @@ def foo():
 
 @app.route("/test")
 def test():
-    return "<h1>test</h1>"
+    with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            #look for upcoming flights that the customer has not bought yet
+        query1 = "select flight.flight_num from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != 'one@nyu.edu' and flight.status = 'Upcoming'"
+        cur.execute(query1)
+        data = cur.fetchall()
+
+    return str(len(data))
 
 @app.route('/public')
 def public():
@@ -237,39 +243,68 @@ def login():
 #CUSTOMER USE CASES
 @app.route('/customer_viewmyflights', methods = ['GET','POST'])
 def customer_viewmyflights():
-    customer = session[Customer.EMAIL]
-    with cnx.cursor(pymysql.cursors.DictCursor) as cur:        
-        query = f"select distinct * from flight natural join purchases natural join ticket where purchases.customer_email = {customer} and flight.status = 'Upcoming'"
-        cur.execute(query)
-        data = cur.fetchall()
-    result = str(data)
-    return result
+    customer = request.args[Customer.EMAIL]
+    criteria = None
+    value = None
+
+    if request.method =='POST':
+        criteria = request.args.get('criteria')
+        value = request.args.get('value')
+
+    with cnx.cursor(pymysql.cursors.DictCursor) as cur:    
+        if criteria == None and value == None:    
+            query = f"select distinct * from flight natural join purchases natural join ticket where purchases.customer_email = {customer} and flight.status = 'Upcoming'"
+            cur.execute(query)
+            data = cur.fetchall()
+        else:
+            query = f"select distinct * from flight natural join purchases natural join ticket where purchases.customer_email = {customer} and flight.status = 'Upcoming' and flight.{criteria} = '{value}'"
+            cur.execute(query)
+            data = cur.fetchall()
+
+    return {'status':0, 'result': data}
 
 @app.route('/customer_purchasetickets', methods = ['GET', 'POST'])
 def customer_purchaseflights():
+    customer = request.args[Customer.EMAIL]
     if request.method == 'POST':
-        customer = session['customer']
-        airline = request.args.get('airline')
+        airline_name = request.args.get('airline_name')
         flight_num = request.args.get('flight_num')
 
-        with cnx.cursor() as cur:
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
             #look for upcoming flights that the customer has not bought yet
-            query1 = "select flight.flight_num, ticket.ticket_id from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != {customer} and flight.status = 'Upcoming'"
+            query1 = "select flight.flight_num from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != {customer} and flight.status = 'Upcoming'"
             cur.execute(query1)
-            data = cur.fetchone()
+            data = cur.fetchall()
+            
             if not data:
                 return 'No flights available'
             else:
-                today = date.today()
-                today = today.strftime("%Y-%m-%d")
-                new_ticket_id = int(data[1]) + 1
-                query2 = f'insert into purchases values ({new_ticket_id}, {customer}, null, {today})'
-                cur.execute(query2)
-                query3 = f'insert into ticket values ({new_ticket_id}, {airline}, {flight_num})'
-                cur.execute(query3)
-            cnx.commit()
-            
-        return 'Ticket purchase successful!'
+                for i in range(len(data)):
+                    if data[i]['flight_num'] == flight_num:
+                        with cnx.cursor() as cursor:
+                        #look for the maximum number of ticket_id
+                            query2 = 'select max(ticket_id) from ticket'
+                            cursor.execute(query2)
+                            ticket_id = cursor.fetchone()
+                            if not ticket_id[0]: # no any ticket exists
+                                new_id = 1
+                            else:
+                                new_id = int(ticket_id[0]) + 1
+                            today = date.today()
+                            today = today.strftime("%Y-%m-%d")
+                            query3 = f'insert into purchases values ({new_id}, {customer}, null, {today})'
+                            cur.execute(query3)
+                            query4 = f'insert into ticket values ({new_id}, {airline_name}, {flight_num})'
+                            cur.execute(query4)
+                            cnx.commit()
+
+                            return 'Ticket purchase successful!'
+                    else:
+                        continue
+                    
+                return 'Ticket purchase unsuccessful!'
+
+                    
 
 
 @app.route('/customer_searchforflights', methods = ['GET', 'POST'])
@@ -300,14 +335,16 @@ def customer_searchforflights():
                 return {'status':0, 'result': data}
     else:
         with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-                query1 = f"select * from flight where status = 'Upcoming' and {criteria} = '{value}'"
-                cur.execute(query1)
-                data = cur.fetchall()
-                return {'status':0, 'result': data}
+            query1 = f"select * from flight where status = 'Upcoming' and {criteria} = '{value}'"
+            cur.execute(query1)
+            data = cur.fetchall()
+            return {'status':0, 'result': data}
 
 @app.route('/customer_trackmyspending', methods = ['GET', 'POST'])
 def customer_trackmyspending():
-    if Customer.EMAIL in session:
+    customer_email = request.args[Customer.EMAIL]
+
+    if customer_email in session:
         email = request.args.get('email')
         start_year = int(request.args.get('start_year'))
         end_year = int(request.args.get('end_year'))
@@ -380,13 +417,219 @@ def customer_trackmyspending():
                 ax1.set_xlabel('Month')
                 ax1.set_ylabel('Spending')
                     
-                return {'status': 0, 'result': [data1, month, monthly_spending]}
+                return {'status': 0, 'result': [month, monthly_spending]}
 
 @app.route('/customer_logout')
 def customer_logout():
-    session.pop(Customer.EMAIL)
+    customer_email = request.args[Customer.EMAIL]
+
+    session.pop(customer_email)
     
     return "Goodbye!"
 
+#BOOKING AGENT USE CASES
+
+@app.route('/bookingagent_viewmyflights', methods = ['GET','POST'])
+def bookingagent_viewmyflights():
+    agent_id = session[Agent.BOOKING_AGENT_ID]
+    criteria = None
+    value = None
+    if request.method =='POST':
+        criteria = request.args.get('criteria')
+        value = request.args.get('value')
+
+    with cnx.cursor(pymysql.cursors.DictCursor) as cur:   
+        if criteria != None and value!= None:
+            query = f"select distinct * from flight natural join purchases natural join ticket where purchases.booking_agent_id = {agent_id} and flight.status = 'Upcoming' and flight.{criteria} = '{value}'"
+            cur.execute(query)
+            data = cur.fetchall()
+        else:
+            query = f"select distinct * from flight natural join purchases natural join ticket where purchases.booking_agent_id = {agent_id} and flight.status = 'Upcoming'"
+            cur.execute(query)
+            data = cur.fetchall()
+
+    return {'status':0, 'result': data}
 
 
+@app.route('/bookingagent_purchasetickets', methods = ['GET', 'POST'])
+def bookingagent_purchase():
+    agent_email = request.args[Agent.EMAIL]
+
+    if agent_email in session:
+        with cnx.cursor() as curr:
+            query = f"SELECT airline_name from booking_agent_work_for where email = '{Agent.EMAIL}'"
+            curr.execute(query)
+            dataa = curr.fetchone()
+            airline_name = dataa[0]
+            q = f"SELECT booking_agent_id from booking_agent where email = '{Agent.EMAIL}'"
+            curr.execute(q)
+            agent_id = curr.fetchone()
+            booking_agent_id = agent_id[0]
+
+        if request.method == 'POST':
+            flight_num = request.args.get('flight_num')
+            customer_email = request.args.get('customer_email')
+
+            with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+                #look for upcoming flights that the customer has not bought yet
+                query1 = f"select flight.flight_num from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != {customer} and flight.status = 'Upcoming'"
+                cur.execute(query1)
+                data = cur.fetchall()
+
+                if not data:
+                    return 'No flights available'
+                else:
+                    
+                    for i in range(len(data)):
+                        if data[i]['flight_num'] == flight_num:
+                            with cnx.cursor() as cursor:
+                                #check if the flight number is from the correct airline
+                                check = f"select airline_name from flight where flight_num = '{flight_num}'"
+                                cur.execute(check)
+                                airline = cur.fetchall()
+                                if airline[0][0] != airline_name:
+                                    return {'status': -1, 'reason': 'Not from the same airline!'}
+                                #look for the maximum number of ticket_id
+                                query2 = 'select max(ticket_id) from ticket'
+                                cursor.execute(query2)
+                                ticket_id = cursor.fetchone()
+                                if not ticket_id[0]: # no any ticket exists
+                                    new_id = 1
+                                else:
+                                    new_id = int(ticket_id[0]) + 1
+                                today = date.today()
+                                today = today.strftime("%Y-%m-%d")
+                                query3 = f'insert into purchases values ({new_id}, {customer_email}, {booking_agent_id}, {today})'
+                                cur.execute(query3)
+                                query4 = f'insert into ticket values ({new_id}, {airline_name}, {flight_num})'
+                                cur.execute(query4)
+                                cnx.commit()
+
+                                return {'status': 0, 'result': 'Ticket purchase successful!'}
+                        else:
+                            continue
+                        
+                    return {'status': -1, 'reason': 'Ticket purchase unsuccessful!'}
+
+
+@app.route('/bookingagent_searchforflights', methods = ['GET', 'POST'])
+def bookingagent_searchforflights():
+    criteria = request.args.get('criteria')
+    value = request.args.get('value')
+    staff_username = request.args[Staff.USERNAME]
+
+    if staff_username in session:
+        with cnx.cursor() as cur:
+            query = "select permission_type from permission where username = '{}'".format(session['staff'])
+            cur.execute(query)
+            permission = cur.fetchone()
+            permissions = permission[0]
+    else:
+        permissions = None
+
+    if criteria == None:
+        if permissions != None:
+            with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+                query = "select * from flight"
+                cur.execute(query)
+                data = cur.fetchall()
+                return {'status':0, 'result': data}
+        else:       
+            with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+                query = "select * from flight where status = 'Upcoming'"
+                cur.execute(query)
+                data = cur.fetchall()
+                return {'status':0, 'result': data}
+    else:
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            query1 = f"select * from flight where status = 'Upcoming' and {criteria} = '{value}'"
+            cur.execute(query1)
+            data = cur.fetchall()
+            return {'status':0, 'result': data}
+
+
+@app.route('/bookingagent_viewmycommission', methods = ['GET', 'POST'])
+def bookingagent_viewmycommission():
+    agent_email = request.args[Agent.EMAIL]
+
+    if agent_email in session:
+        start_date = None
+        end_date = None
+
+        if request.method == 'POST':
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date')
+        else:
+            pass
+
+        if start_date == None and end_date == None:
+            with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+                #assume commission is 10% of ticket price
+
+                query = f"select sum(flight.price)*0.1 as total_commission, (sum(flight.price)*0.1)/count(ticket.flight_num) as average_commission, count(ticket.flight_num) as number_of_tickets from purchases natural join booking_agent natural join flight natural join ticket where booking_agent.email = '{agent_email}' and purchases.purchase_date >= adddate(date(now()), interval -30 day)"
+                cur.execute(query)
+                data = cur.fetchone()
+
+                return {'status': 0, 'result': data}
+        else:
+            with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
+                query = f"select sum(flight.price)*0.1 as total_commission, (sum(flight.price)*0.1)/count(ticket.flight_num) as average_commission, count(ticket.flight_num) as number_of_tickets from purchases natural join booking_agent natural join flight natural join ticket where booking_agent.email = '{agent_email}' and purchases.purchase_date > '{start_date}' and purchases.purchase_date < '{end_date}'"
+                cursor.execute(query)
+                data = cursor.fetchone()
+
+                return {'status': 0, 'result': data}
+
+
+
+@app.route('/bookingagent_viewtopcustomers', methods = ['GET', 'POST'])
+def bookingagent_viewtopcustomers():
+    agent_email = request.args[Agent.EMAIL]
+    if agent_email in session:
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            query1 = f"select customer_email, count(*) as ticket_count from purchases natural join booking_agent where booking_agent.email = {agent_email} and purchases.purchase_date >= adddate(date(now()), interval -6 month) group by customer_email order by count(*) desc limit 5"
+            cur.execute(query1)
+            data_1 = cur.fetchall()
+
+        top_customers_count = []
+        customers_ticket_count = []
+
+        for i in range(len(data_1)):
+            cust_email = data_1[i]['customer_email']
+            with cnx.cursor() as cursor:
+                query_name = f"select name from customer where email = '{cust_email}'"
+                cursor.execute(query_name)
+                name = cursor.fetchone()
+            top_customers_count.append(name[0])
+            customers_ticket_count.append(data_1[i]['ticket_count'])
+        
+
+        top_customers_commission = []
+        customers_commission = []
+
+        with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
+            query2 = f"select customer_email, sum(flight.price)*0.1 as total_commission from purchases natural join booking_agent natural join flight natural join ticket where booking_agent.email = '{agent_email}' and purchases.purchase_date >= adddate(date(now()), interval -6 month) group by customer_email order by total_commission desc limit 5"
+            cursor.execute(query2)
+            data_2 = cursor.fetchall()
+
+        for i in range(len(data_2)):
+            cust_email = data_2[i]['customer_email']
+            with cnx.cursor() as cursor:
+                query_name = f"select name from customer where email = '{cust_email}'"
+                cursor.execute(query_name)
+                name = cursor.fetchone()
+            top_customers_commission.append(name[0])
+            customers_commission.append(data_2[i]['total_commission'])
+
+        
+        return {'status': 0, 'result': [top_customers_count, customers_ticket_count, top_customers_commission, customers_commission]}
+
+
+@app.route('/bookingagent_logout')
+def bookingagent_logout():
+    agent_email = request.args[Agent.EMAIL]
+    session.pop(agent_email)
+
+    return "Goodbye!"
+
+if __name__ == '__main__':
+    app.run()
