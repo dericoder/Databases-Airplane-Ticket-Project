@@ -14,12 +14,15 @@ failed queries
 }
 """
 
+from xml.dom.minidom import parseString
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 import pymysql.cursors
 from datetime import date
 from response import ErrorResponse, Response, Staff, Customer, Agent, Data
 import matplotlib.pyplot as plt
+import datetime
+import numpy as np
 
 CUSTOMER = 1
 AGENT = 2
@@ -360,10 +363,10 @@ def customer_trackmyspending():
 
     if customer_email in session:
         email = request.args.get('email')
-        start_year = int(request.args.get('start_year'))
-        end_year = int(request.args.get('end_year'))
-        start_month = int(request.args.get('start_month'))
-        end_month = int(request.args.get('end_month'))
+        start_year = int(request.args.get['start_year'])
+        end_year = int(request.args.get['end_year'])
+        start_month = int(request.args.get['start_month'])
+        end_month = int(request.args.get['end_month'])
 
         if not start_month or not end_month:
             with cnx.cursor() as cur:
@@ -800,7 +803,328 @@ def staff_addairport():
             return ErrorResponse('Permission not granted').json()
 
 
-@app.route('/staff_viewbookingagetns', methods = ['GET', 'POST'])
+@app.route('/staff_viewbookingagents', methods = ['GET', 'POST'])
 def staff_viewbookingagents():
-    pass
+    staff_username = request.args[Staff.USERNAME]
+
+    if staff_username in session:
+        staff_airline = request.args[Staff.WORKS]
+
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            #top booking agents based on number of tickets sales in the past month
+            query = f"select booking_agent.email, count(ticket.ticket_id) as number_of_ticket_sales from booking_agent natural join ticket natural join purchases where airline_name = '{staff_airline}' and purchases.purchase_date >= adddate(date(now()), interval -1 month) group by booking_agent.email order by number_of_ticket_sales desc limit 5"
+            cur.execute(query)
+            data1 = cur.fetchall()
+        
+        with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
+            #top booking agents based on commission in the past year
+            query2 = f"select booking_agent.email, 0.1*sum(flight.price) as commission from booking_agent natural join flight natural join ticket natural join purchases where airline_name = '{staff_airline}' and purchases.purchase_date >= adddate(date(now()), interval -12 month) group by booking_agent.email order by commission desc limit 5"
+            cursor.execute(query)
+            data2 = cur.fetchall()
+
+        return Response(0).addData(Data('result1', data1)).addData(Data('result2', data2)).json()
+
+    else:
+
+        return ErrorResponse('Request Failed!')
+
+
+@app.route('/staff_viewfrequentcustomers', methods = ['GET', 'POST'])
+def staff_viewfrequentcustomers():
+    staff_username = request.args[Staff.USERNAME]
+
+    if staff_username in session:
+        staff_airline = request.args[Staff.WORKS]
+
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            #frequent customers in the past year
+            query = f"select customer_email, count(ticket.ticket_id) as tickets_bought from purchases natural join ticket where airline_name = '{staff_airline}' and purchases.purchase_date >= adddate(date(now()), interval -12 month) group by customer_email order by tickets_bought desc limit 5"
+            cur.execute(query)
+            data1 = cur.fetchall()
+
+        with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
+            #flights a particular customer has taken in the past year
+            customer_email = request.args['customer_email']
+
+            try:
+                query = f"select flight.airline_name, flight.flight_num from purchases where customer_email = '{customer_email}' and flight.airline_name = '{staff_airline}' and purchases.purchase_date >= adddate(date(now()), interval -12 month)"
+                cursor.execute(query)
+                data2 = cursor.fetchall()
+
+            except Exception as e:
+                err = 'Customer not found!'
+                print(e)
+                return ErrorResponse(err).json()
+
+        return Response(0).addData(Data('result1', data1)).addData(Data('result2', data2)).json()
+
+    else:
+        return ErrorResponse('Request Failed!').json()
+
+
+@app.route('/staff_viewreport', methods = ['GET', 'POST'])
+def staff_viewreport():
+    staff_username = request.args[Staff.USERNAME]
+    start_year = None
+    end_year = None
+
+    if staff_username in session:
+        staff_airline = request.args[Staff.WORKS]
+        start_year = int(request.args.get['start_year'])
+        end_year = int(request.args.get['end_year'])
+        start_month = int(request.args.get['start_month'])
+        end_month = int(request.args.get['end_month'])
+
+        if start_year == None and end_year == None:
+            #default view is the past year
+            with cnx.cursor() as cur:
+                i = 0
+                query = f"select year(date_sub(date(now()), interval {i} month)) as year, month(date_sub(date(now()), interval {i} month)) as month, count(*) as tickets_sold from purchases natural join flight where flight.airline_name = '{staff_airline}' and year(purchase_date) = year(date_sub(date(now()), interval {i} month)) and month(purchase_date) = month(date_sub(date(now()), interval {i} month))"
+                months = [0,1,2,3,4,5,6,7,8,9,10,11,12]
+                monthly_sales = []
+
+                for month in months:
+                    i = month
+                    cur.execute(query)
+                    data = cur.fetchone()
+                    monthly_sales.append(int(data['tickets_sold']))
+                    months[month] = str(data['month'])+'/'+str(data['year'])
+
+                fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
+                ax1.bar(months, height=monthly_sales)
+                ax1.set_title('Monthly ticket sales')
+                ax1.set_xlabel('Month')
+                ax1.set_ylabel('Number of Tickets sold')
+
+            return {'status': 0, 'result': [months, monthly_sales]} 
+
+        else:
+
+            if start_year > end_year:
+                return ErrorResponse('Start date has to be before end date!').json()
+            if start_year == end_year:
+                if start_month > end_month:
+                    return ErrorResponse('Start date has to be before end date!').json()
+
+            start_date = str(start_year) + '-' +str(start_month) + '/' + '01'
+            end_date = str(end_year) + '-' +str(end_month) + '/' + '01'
+
+            with cnx.cursor() as cursor:
+                i = 0
+                query = f"select year(date_sub(date('{start_date}')), interval {i} month) as year, month(date_sub(date('{start_date}')), interval {i} month) as month, count(*) as tickets_sold from purchases natural join flight where flight.airline_name = '{staff_airline}' and year(purchase_date) = year(date_sub(date('{start_date}')), interval {i} month) and month(purchase_date) = month(date_sub(date('{start_date}')), interval {i} month)"
+
+                end_date = datetime.datetime(int(end_year),int(end_month),1)
+                start_date = datetime.datetime(int(start_year), int(start_month), 1)
+
+                num_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+
+                months = [i for i in range(num_months)]
+                monthly_sales = []
+
+                for month in months:
+                    i = month
+                    cursor.execute(query)
+                    data = cur.fetchone()
+                    monthly_sales.append(int(data['tickets_sold']))
+                    months[month] = str(data['month'])+'/'+str(data['year'])
+
+                fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
+                ax1.bar(months, height=monthly_sales)
+                ax1.set_title('Monthly ticket sales')
+                ax1.set_xlabel('Month')
+                ax1.set_ylabel('Number of Tickets sold')
+
+            return {'status': 0, 'result': [months, monthly_sales]} 
                 
+
+@app.route('/staff_comparerevenue', methods = ['GET', 'POST'])
+def staff_comparerevenue():
+    staff_username = request.args[Staff.USERNAME]
+
+    if staff_username in session:
+        staff_airline = request.args[Staff.WORKS]
+
+        direct_last_month = 0
+        indirect_last_month = 0
+
+        query_customer_last_month = f"select sum(flight.price) as sales from flight natural join purchases natural join ticket where ticket.airline_name = '{staff_airline}' and purchases.booking_agent_id is null and purchase_date >= adddate(date(now()), interval -30 day)"
+        query_agent_last_month = f"select sum(flight.price) as sales from flight natural join purchases natural join ticket where ticket.airline_name = '{staff_airline}' and purchases.booking_agent_id is not null and purchase_date >= adddate(date(now()), interval -30 day)"
+        
+        cur = cnx.cursor()
+        cur.execute(query_customer_last_month)
+        direct_last_month_sales = cur.fetchone()[0]
+        direct_last_month = int(direct_last_month_sales)
+        cur.close()
+
+        cur = cnx.cursor()
+        cur.execute(query_agent_last_month)
+        indirect_last_month_sales = cur.fetchone()[0]
+        indirect_last_month = int(indirect_last_month_sales)
+        cur.close()
+
+        direct_last_year = 0
+        indirect_last_year = 0
+
+
+        query_customer_last_year = f"select sum(flight.price) as sales from flight natural join purchases natural join ticket where ticket.airline_name = '{staff_airline}' and purchases.booking_agent_id is null and purchase_date >= adddate(date(now()), interval -12 month)"
+        query_agent_last_year = f"select sum(flight.price) as sales from flight natural join purchases natural join ticket where ticket.airline_name = '{staff_airline}' and purchases.booking_agent_id is not null and purchase_date >= adddate(date(now()), interval -12 month)"
+        
+
+        cur = cnx.cursor()
+        cur.execute(query_customer_last_year)
+        direct_last_year_sales = cur.fetchone()[0]
+        direct_last_year = int(direct_last_year_sales)
+        cur.close()
+
+        cur = cnx.cursor()
+        cur.execute(query_agent_last_year)
+        indirect_last_year_sales = cur.fetchone()[0]
+        indirect_last_year = int(indirect_last_year_sales)
+        cur.close()
+        
+
+        #create 2 pie charts
+
+        fig = plt.figure(figsize=(10,4))
+
+        ax1 = fig.add_subplot(121)
+        ax2 = fig.add_subplot(122)
+
+        last_month = np.array([direct_last_month, indirect_last_month])
+        last_year = np.array([direct_last_year, indirect_last_year])
+
+        last_month_label = [f'Without booking agent: ${direct_last_month}', f'With booking agent: ${indirect_last_month}']
+        last_year_label = [f'Without booking agent: ${direct_last_year}', f'With booking agent: S{indirect_last_year}']
+        ax1.pie(last_month, labels = last_month_label)
+        ax2.pie(last_year, labels = last_year_label)
+
+        ax1.set_title('Sales in the past month')
+        ax2.set_title('Sales in the past year')
+
+        return Response(0).addData(Data('past_month', last_month)).addData(Data('past_year', last_year)).json()
+
+
+@app.route('/staff_viewtopdestinations', methods = ['GET', 'POST'])
+def staff_viewtopdestinations():
+    staff_username = request.args[Staff.USERNAME]
+
+    if staff_username in session:
+        staff_airline = request.args[Staff.WORKS]
+
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            query = f"select arrival_airport from flight natural join purchases where flight.airline_name = '{staff_airline}' and purchase_date >= adddate(date(now()), interval -3 month) group by flight.arrival_airport order by count(*) desc"
+            cur.execute(query)
+
+            data1 = cur.fetchall()
+
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            query = f"select arrival_airport from flight natural join purchases where flight.airline_name = '{staff_airline}' and purchase_date >= adddate(date(now()), interval -12 month) group by flight.arrival_airport order by count(*) desc"
+            cur.execute(query)
+
+            data2 = cur.fetchall()
+
+        return Response(0).addData(Data('topdestinations_3months', data1)).addData(Data('topdestinations_1year', data2)).json()
+
+    else:
+
+        return ErrorResponse('Request Failed!').json()
+
+
+@app.route('/staff_grantnewpermissions', methods = ['GET', 'POST'])
+def staff_grantnewpermissions():
+    staff_username = request.args[Staff.USERNAME]
+
+    if staff_username in session:
+        staff_airline = request.args[Staff.WORKS]
+        with cnx.cursor() as cur:
+            query = f"select permission_type from permission where username = '{staff_username}'"
+            cur.execute(query)
+            permission = cur.fetchone()[0]
+
+        if permission == 'Admin' or permission == 'Both':
+            other_username = request.args.get['staff_username']
+            new_permission = request.args.get['new_permission']
+
+            if new_permission in ['Admin', 'Operator', 'Both']:
+                with cnx.cursor() as cur:
+                        #check if other_username is in the same airline
+                    q = f"select airline_name from airline_staff where username = '{other_username}'"
+                    cur.execute(q)
+                    other_airline = cur.fetchone()[0]
+                    if other_airline != staff_airline:
+                        return ErrorResponse('Staff is froma different airline. Permission not granted!').json()
+                    
+                    else:
+                        query = f"update permission set permission_type = '{new_permission}' where username = '{other_username}'"
+                        cur.execute(query)
+                    
+                    cnx.commit()
+                    
+                with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
+                    query = f"select username, permission_type from airline_staff natural join permission where airline_name = '{staff_airline}'"
+                    cursor.execute(query)
+                    data = cursor.fetchall()
+
+                return {'status':0, 'updated list': data}.json()
+
+
+            else:
+                return ErrorResponse('Incorrect Permission!').json()
+
+
+        else:
+            
+            return ErrorResponse('User not authorized!').json()
+
+
+    else:
+        return ErrorResponse('User not authorized!').json()
+
+
+
+@app.route('/staff_addbookingagents', methods = ['GET', 'POST'])
+def staff_addbookingagents():
+    staff_username = request.args[Staff.USERNAME]
+
+    if staff_username in session:
+        staff_airline = request.args[Staff.WORKS]
+
+        with cnx.cursor() as cur:
+            query = f"select permission_type from permission where username = '{staff_username}'"
+            cur.execute(query)
+            permission = cur.fetchone()[0]
+
+        with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
+            query = f"select email from booking_agent natural join booking_agent_work_for"
+            cursor.execute(query)
+            emails = cursor.fetchall()
+
+        if permission == 'Admin' or permission == 'Both':
+            agent_email = request.args['new_agent_email']
+            if agent_email not in emails.values():
+                return ErrorResponse('Bookign agent is not registered yet').json()
+            
+            else:
+
+                try:
+                    with cnx.cursor() as cur:
+                        query = f"insert into booking_agent_work_for values ('{agent_email}','{staff_airline}')"
+                        cur.execute(query)
+                    cnx.commit()
+
+                except Exception as e:
+                    err = 'Agent cannot be added!'
+                    return ErrorResponse(err).json()
+
+        else:
+            
+            return ErrorResponse('User not authorized!').json()
+
+
+@app.route('/staff_logout', methods = ['GET', 'POST'])
+def staff_logout():
+    customer_email = request.args[Customer.EMAIL]
+
+    session.pop(customer_email)
+    
+    return "Goodbye!"
