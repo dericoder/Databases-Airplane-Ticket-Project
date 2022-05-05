@@ -1,11 +1,12 @@
 import "../css/SearchFlights.css"
 import React from 'react';
 import { withCookies, Cookies } from 'react-cookie'
-import { Container, Form, Button } from 'react-bootstrap'
+import { Container, Form, Button, FloatingLabel as Label, Row, Col } from 'react-bootstrap'
 import { instanceOf } from 'prop-types'
-import { Airports } from '../Utils'
+import { Airports, Flight } from '../Utils'
 import { Typeahead } from 'react-bootstrap-typeahead'
 import axios from "axios";
+import { Navigate } from "react-router-dom"
 
 class SearchClass extends React.Component {
 
@@ -21,17 +22,19 @@ class SearchClass extends React.Component {
             departureValidated: true,
             dateValidated: true,
             arrival: "",
-            departure: ""
+            departure: "",
+            flights: []
         }
 
         this.validate = this.validate.bind(this);
         this.onSubmit = this.onSubmit.bind(this);
         this.search = this.search.bind(this);
+        this.purchaseFlightTicket = this.purchaseFlightTicket.bind(this);
     }
 
     onSubmit() {
         if(!this.validate()) {
-            this.setState({error: true, errorMessage: "All fields must be filled"})
+            this.setState({error: true, errorMessage: "Check the fields again"})
             return;
         }
 
@@ -46,8 +49,21 @@ class SearchClass extends React.Component {
                 date: this.state.date
             }
         }).then((res) => {
-            console.log(res);
-        })
+            let flightResults = res.data.flights;
+
+            if(flightResults.length === 0) {
+                this.setState({error: true, errorMessage: "No flights found", flights: []})
+            } else {
+                let state = {
+                    error: false,
+                    errorMessage: "",
+                    flights: flightResults
+                }
+                this.setState(state)
+            }
+        }).catch((e) => {
+            this.setState({error: true, errorMessage: "A server error occurred", flights: []})
+        });
     }
 
     validate() {
@@ -77,15 +93,40 @@ class SearchClass extends React.Component {
         fields.arrivalValidated = Airports.has(this.state.arrival);
         fields.departureValidated = Airports.has(this.state.departure);
 
+        if(this.state.arrival === this.state.departure) {
+            fields.arrivalValidated = false;
+            fields.departureValidated = false;
+            valid = false;
+        }
+
         this.setState(fields);
 
         return valid;
     }
 
+    purchaseFlightTicket() {
+        if(this.props.allCookies['user'] === 'null') {
+            this.setState({loggedIn: false})
+            return;
+        }
+
+        console.log("purchasing")
+    }
+
     render() {
+        if(this.state.loggedIn !== undefined) {
+            if(!this.state.loggedIn) {
+                return <Navigate to={{pathname: '/login'}} />;
+            }
+        }
+
         return (
             <Container id="searchContainer">
-                <Container id="form" className="pt-3 pb-3">
+                <Container id="searchForm" className="pt-3 pb-3">
+                    <Label className="mt-3 mb-3 notification-error" hidden={!this.state.error}>
+                        {this.state.errorMessage}
+                    </Label>
+
                     <Form.Group className="mb-3 airportfield">
                         <Form.Label>From</Form.Label>
                         <Typeahead 
@@ -126,50 +167,53 @@ class SearchClass extends React.Component {
                         </Form.Control.Feedback>
                     </Form.Group>
 
-                    <Button className="mb-3 mt-3" id="btnSubmit" onMouseUp={this.onSubmit}>
+                    <Button className="mb-3 mt-3" id="btnSubmitSearch" onMouseUp={this.onSubmit}>
                         Search
                     </Button>
+                </Container>
+                <Container className="mt-5 ps-0 pe-0" id="flightlist">
+                    {
+                        this.state.flights.length > 0 ? this.state.flights.map((data) => {
+                                return <FlightInfo info={data} purchaseFlightTicket={this.purchaseFlightTicket}/>
+                            }) : ''
+                    }
                 </Container>
             </Container>
         )
     }
 }
 
-class AutoComplete extends React.Component {
-
-    constructor(props) {
-        super(props);
-
-        this.state = {
-            popupShown: false,
-            selected: "",
-            filteredOptions: props.options
-        };
-    }
-
+class FlightInfo extends React.Component {
     render() {
         return (
-            <div>
-                <Form.Control placeholder={this.props.placeholder} 
-                              value={this.state.selected}
-                              onChange={(e) => {
-                                    this.setState({selected: e.target.value, filteredOptions: this.props.options.filter((data) => {return data.airport.toLowerCase().includes(e.target.value.toLowerCase()) || data.city.toLowerCase().includes(e.target.value.toLowerCase())}) })
-                                    this.props.update(e.target.value);
-                              }}
-                              onFocus={() => this.setState({popupShown: true})} />
-                <Container id="popup" hidden={!this.state.popupShown}>
-                    {this.state.filteredOptions.map((data) => {
-                        return <Button id="test" key={data.id}
-                                       onMouseUp={() => {
-                                            this.setState({selected: data.airport, popupShown: false})
-                                            this.props.update(data.airport);
-                                       }}>
-                                    {data.city + " (" + data.airport + ")"}
-                                </Button>;
-                    })}
+            <Container className="mb-3 pt-3 pb-3" id="flightlist-container">
+                <Container id="flightlist-info">
+                    <Container id="flightlist-flight">
+                        <Label style={{'font-size': '20px'}}>{this.props.info[Flight.AIRLINE]}</Label>
+                        <Label style={{'font-size': '15px'}}>{this.props.info[Flight.AIRPLANE]}</Label>
+                    </Container>
+                    <Container id="flightlist-airports">
+                        <Row>
+                            <Col style={{'text-align': 'center'}}>
+                                <Label>{this.props.info[Flight.DEPARTURE_TIME]}</Label>
+                                <Label>{this.props.info[Flight.DEPARTURE_AIRPORT]}</Label>
+                            </Col>
+                            <Col style={{'text-align': 'center', 'justify-content': 'center'}}>
+                                <Label>1h30min</Label>
+                                <Label>{'\u2501\u2501\u2501\u2501\u2501\u2501'}</Label>
+                            </Col>
+                            <Col style={{'text-align': 'center'}}>
+                                <Label>{this.props.info[Flight.ARRIVAL_TIME]}</Label>
+                                <Label>{this.props.info[Flight.ARRIVAL_AIRPORT]}</Label>
+                            </Col>
+                        </Row>
+                    </Container>
                 </Container>
- 
-            </div>
+                <Container id="flightlist-price">
+                    <Label>{'$' + this.props.info[Flight.PRICE]}</Label>
+                    <Button onMouseUp={this.props.purchaseFlightTicket} style={{'margin-top': 'auto', 'width': '100px', 'margin-left': 'auto'}}>Purchase</Button>
+                </Container>
+            </Container>
         );
     }
 }

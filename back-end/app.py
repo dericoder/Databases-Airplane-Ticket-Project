@@ -43,15 +43,25 @@ def search():
 
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:
         query = f"select * from flight where departure_airport='{departure}' and arrival_airport='{arrival}' and date(departure_time)='{date}'"
-        print(query)
         cur.execute(query)
         rv = cur.fetchall()
 
         data = []
         for d in rv:
-            data.append(d)
+            new = Data()
+            for k in d:
+                new.addData(k, str(d[k]))
 
-    return Response(0).addData(Data('flights', data)).json()
+            arrival_dt = new.data['arrival_time']
+            new.data['arrival_date'] = arrival_dt.split(" ")[0]
+            new.data['arrival_time'] = arrival_dt.split(" ")[1]
+
+            departure_dt = new.data['departure_time']
+            new.data['departure_date'] = departure_dt.split(" ")[0]
+            new.data['departure_time'] = departure_dt.split(" ")[1]
+            data.append(new)
+
+    return Response(0).addList('flights', data).json()
 
 @app.route("/")
 def foo():

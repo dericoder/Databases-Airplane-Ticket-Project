@@ -20,7 +20,7 @@ class Response:
         if(key not in self.data):
             self.data[key] = []
 
-        if(data is list):
+        if(type(data) is list):
             for d in data:
                 self.data[key].append(d.data)
         else:

@@ -4,7 +4,7 @@
     margin-top: 100px;
 }
 
-#form {
+#searchForm {
     width: 500px !important;
     height: fit-content;
     display: flex;
@@ -12,6 +12,10 @@
     padding-left: 0;
     padding-right: 0;
     flex-wrap: wrap;
+    background-color: white;
+    border-radius: 10px;
+    border: 1px solid rgb(241, 241, 241) !important;
+    box-shadow: 0 2px 2px 0 rgba(85, 85, 85, 0.2);
 }
 
 .airportfield {
@@ -26,7 +30,7 @@
     margin-right: 40px;
 }
 
-#btnSubmit {
+#btnSubmitSearch {
     background-color: lightgray;
     color: black;
     border: 0px;
@@ -61,4 +65,60 @@
     padding-right: 0 !important;
     border: 1px solid lightgray;
     background-color: white;
+}
+
+.notification-error {
+    width: 100%;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    height: fit-content;
+    border: 1px solid rgb(255, 190, 190);
+    background-color: rgb(255, 210, 210);
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: rgb(151, 102, 102);
+    margin-left: 40px;
+    margin-right: 40px;
+}
+
+#flightlist {
+    width: 900px;
+    height: fit-content;
+    margin-bottom: 200px;
+}
+
+#flightlist-container {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    border-radius: 10px;
+    border: 1px solid rgb(241, 241, 241) !important;
+    box-shadow: 0 2px 2px 0 rgba(85, 85, 85, 0.2);
+    background-color: white;
+}
+
+#flightlist-info {
+    width: 600px;
+    height: 100%;
+    display: flex;
+}
+
+#flightlist-price {
+    height: 100%;
+    text-align: end;
+    flex: 1;
+    font-size: 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+#flightlist-flight {
+    width: 120px;
+}
+
+#flightlist-airports {
+    width: 200px;
+    flex: 1;
 }

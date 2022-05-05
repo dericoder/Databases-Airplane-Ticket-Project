@@ -70,6 +70,20 @@ class Agent {
     }
 }
 
+class Flight {
+    static AIRLINE = "airline_name";
+    static NUMBER = "flight_num";
+    static DEPARTURE_AIRPORT = "departure_airport";
+    static DEPARTURE_TIME = "departure_time";
+    static DEPARTURE_DATE = "departure_date";
+    static ARRIVAL_AIRPORT = "arrival_airport";
+    static ARRIVAL_TIME = "arrival_time";
+    static ARRIVAL_DATE = "arrival_date";
+    static PRICE = "price";
+    static STATUS = "status";
+    static AIRPLANE = "airplane_id";
+}
+
 class Airports {
     static JFK = {airport: "JFK", city: "New York City", label: "NYC, JFK"}
     static LA_GUARDIA = {airport: "La Guardia", city: "New York City", label: "NYC, La Guardia"}
@@ -105,5 +119,6 @@ export {
     Staff,
     Customer,
     Agent,
-    Airports
+    Airports,
+    Flight
 }
