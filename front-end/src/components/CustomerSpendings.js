@@ -2,7 +2,7 @@ import '../css/CustomerSpendings.css'
 import React from 'react'
 import { withCookies, Cookies } from 'react-cookie'
 import { instanceOf } from 'prop-types'
-import { Container } from 'react-bootstrap'
+import { Container, Image } from 'react-bootstrap'
 import axios from 'axios'
 
 class CustomerSpendingsClass extends React.Component {
@@ -29,6 +29,7 @@ class CustomerSpendingsClass extends React.Component {
         })
             .then((res) => {
                 console.log(res);
+                this.setState({imageData: res.data})
             }).catch((err) => {
                 console.log(err)
             });
@@ -37,7 +38,7 @@ class CustomerSpendingsClass extends React.Component {
     render() {
         return (
             <Container className="spendingsContainer">
-
+                <Image src={this.state.imageData === undefined ? '' : this.state.imageData} />
             </Container>
         );
     }

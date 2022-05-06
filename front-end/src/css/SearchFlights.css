@@ -67,8 +67,8 @@
     background-color: white;
 }
 
-.notification-error {
-    width: 100%;
+.notification-error-search {
+    width: 500px;
     padding-top: 20px;
     padding-bottom: 20px;
     height: fit-content;
@@ -79,8 +79,8 @@
     justify-content: center;
     align-items: center;
     color: rgb(151, 102, 102);
-    margin-left: 40px;
-    margin-right: 40px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 #flightlist {
@@ -112,6 +112,16 @@
     font-size: 30px;
     display: flex;
     flex-direction: column;
+}
+
+.notification-success-list {
+    width: 500px !important;
+    height: 50px;
+    background-color: rgb(144, 238, 144);
+    border: 1px solid rgb(120, 213, 120);
+    border-radius: 10px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 #flightlist-flight {

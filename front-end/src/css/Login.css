@@ -15,7 +15,7 @@
     width: 100%;
 }
 
-.notification-error {
+.notification-error-login {
     width: 100%;
     padding-top: 20px;
     padding-bottom: 20px;
@@ -27,7 +27,6 @@
     justify-content: center;
     align-items: center;
     color: rgb(151, 102, 102);
-    margin-left: 0 !important;
 }
 
 #footer {

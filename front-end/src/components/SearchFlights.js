@@ -132,11 +132,13 @@ class SearchClass extends React.Component {
 
         return (
             <Container id="searchContainer">
+                <Label className="mb-3 notification-success-list">
+                    {this.state.successMessage}
+                </Label>
+                <Label className="mt-3 mb-3 notification-error-search" hidden={!this.state.error}>
+                    {this.state.errorMessage}
+                </Label>
                 <Container id="searchForm" className="pt-3 pb-3">
-                    <Label className="mt-3 mb-3 notification-error" hidden={!this.state.error}>
-                        {this.state.errorMessage}
-                    </Label>
-
                     <Form.Group className="mb-3 airportfield">
                         <Form.Label>From</Form.Label>
                         <Typeahead 

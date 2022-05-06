@@ -102,7 +102,7 @@ class LoginClass extends React.Component {
 
         return (
             <Container id="form">
-                <Label className="mt-3 ml-0 notification-error" hidden={!this.state.error}>
+                <Label className="mt-3 ml-0 notification-error-login" hidden={!this.state.error}>
                     {this.state.errorMessage}
                 </Label>
 

@@ -212,7 +212,7 @@ class RegisterClass extends React.Component {
 
         return (
             <Container id="form" className="mb-5">
-                <Label className="mt-3 notification-error" hidden={!this.state.error}>
+                <Label className="mt-3 notification-error-register" hidden={!this.state.error}>
                     {this.state.errorMessage}
                 </Label>
                 <Form.Group className="mt-3">

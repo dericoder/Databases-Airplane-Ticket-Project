@@ -14,15 +14,19 @@ failed queries
 }
 """
 
+import re
+from this import d
 from xml.dom.minidom import parseString
-from flask import Flask, request, jsonify, session, redirect, url_for
+from flask import Flask, request, jsonify, session, redirect, url_for, send_file
 from flask_cors import CORS
 import pymysql.cursors
 from datetime import date
 from response import ErrorResponse, Response, Staff, Customer, Agent, Data
 import matplotlib.pyplot as plt
-import datetime
+from datetime import datetime
 import numpy as np
+import base64
+from io import BytesIO
 
 CUSTOMER = 1
 AGENT = 2
@@ -38,14 +42,27 @@ cnx = pymysql.connect(host='localhost',
                     password='Admin123.',
                     db='db_project')
 
+def escape(string):
+    chars = ['\'', '\"', '\\']
+
+    res = ""
+    for c in string:
+        if(c in chars):
+            res += "\\" + c
+        else:
+            res += c
+    
+    return res
+
 @app.route("/search")
 def search():
-    arrival = request.args['arrival']
-    departure = request.args['departure']
-    date = request.args['date']
+    arrival = escape(request.args['arrival'])
+    departure = escape(request.args['departure'])
+    date = escape(request.args['date'])
 
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:
         query = f"select * from flight where departure_airport='{departure}' and arrival_airport='{arrival}' and date(departure_time)='{date}'"
+        print(query)
         cur.execute(query)
         rv = cur.fetchall()
 
@@ -284,77 +301,56 @@ def customer_viewmyflights():
 
     return {'status':0, 'result': data}
 
-@app.route('/customer_purchasetickets', methods = ['GET', 'POST'])
+@app.route('/customer_purchasetickets', methods = ['POST'])
 def customer_purchaseflights():
     customer = request.args[Customer.EMAIL]
-    if request.method == 'POST':
-        airline_name = request.args.get('airline_name')
-        flight_num = request.args.get('flight_num')
+    airline_name = request.args.get('airline_name')
+    flight_num = request.args.get('flight_num')
 
-        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-            #look for upcoming flights that the customer has not bought yet
-            query1 = f"select flight.flight_num from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != \'{customer}\' and flight.status = 'Upcoming'"
-            cur.execute(query1)
-            data = cur.fetchall()
-            
-            if not data:
-                return 'No flights available'
+    with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+        findFlights = f"select * from ticket natural join purchases where flight_num={flight_num} and airline_name='{airline_name}'"
+        cur.execute(findFlights)
+        data = cur.fetchall()
+
+        print(data)
+        if(len(data) > 0):
+            return ErrorResponse('A customer cannot buy the same ticket more than once').json()
+        else:
+            query2 = 'select max(ticket_id) as max from ticket'
+            cur.execute(query2)
+            ticket_id = cur.fetchone()
+            if not ticket_id['max']: # no any ticket exists
+                new_id = 1
             else:
-                for i in range(len(data)):
-                    if data[i]['flight_num'] == int(flight_num):
-                        with cnx.cursor() as cursor:
-                        #look for the maximum number of ticket_id
-                            query2 = 'select max(ticket_id) from ticket'
-                            cursor.execute(query2)
-                            ticket_id = cursor.fetchone()
-                            if not ticket_id[0]: # no any ticket exists
-                                new_id = 1
-                            else:
-                                new_id = int(ticket_id[0]) + 1
-                            today = date.today()
-                            today = today.strftime("%Y-%m-%d")
-                            query4 = f'insert into ticket values ({new_id}, \'{airline_name}\', {flight_num})'
-                            cur.execute(query4)
-                            query3 = f'insert into purchases values ({new_id}, \'{customer}\', null, \'{today}\')'
-                            cur.execute(query3)
-                            cnx.commit()
+                new_id = int(ticket_id['max']) + 1
 
-                            return Response(0).addData(Data('result', 'Ticket purchase successful'))
+            today = date.today()
+            today = today.strftime("%Y-%m-%d")
+        
+            insertTicket = f'insert into ticket values ({new_id}, \'{airline_name}\', {flight_num})'
+            cur.execute(insertTicket)
+            insertPurchases = f'insert into purchases values ({new_id}, \'{customer}\', null, \'{today}\')'
+            cur.execute(insertPurchases)
 
-                return Response(-1).addData(Data('reason', 'Could not find that flight'))
+            cnx.commit()
 
-                    
+            return Response(0).addData(Data("result", "Purchased ticket")).json()
 
 @app.route('/customer_searchforflights', methods = ['GET', 'POST'])
 def customer_searchforflights():
-    arrival = request.args['arrival']
-    departure = request.args['departure']
-    date = request.args['date']
-    if Staff.USERNAME in session:
-        with cnx.cursor() as cur:
-            query = "select permission_type from permission where username = '{}'".format(session['staff'])
-            cur.execute(query)
-            permission = cur.fetchone()
-            permissions = permission[0]
-    else:
-        permissions = None
+    arrival = escape(request.args['arrival'])
+    departure = escape(request.args['departure'])
+    date = escape(request.args['date'])
 
     if arrival == None and departure == None and date == None:
-        if permissions != None:
-            with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-                query = "select * from flight"
-                cur.execute(query)
-                data = cur.fetchall()
-                return {'status':0, 'result': data}
-        else:       
-            with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-                query = "select * from flight where status = 'Upcoming'"
-                cur.execute(query)
-                data = cur.fetchall()
-                return {'status':0, 'result': data}
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+            query = "select * from flight where status = 'Upcoming'"
+            cur.execute(query)
+            data = cur.fetchall()
+            return {'status':0, 'result': data}
     else:
         with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-            query = f"select * from flight where departure_airport='{departure}' and arrival_airport='{arrival}' and date(departure_time)='{date}'"
+            query = f"select * from flight where departure_airport=\"{departure}\" and arrival_airport=\"{arrival}\" and date(departure_time)=\'{date}\'"
             print(query)
             cur.execute(query)
             rv = cur.fetchall()
@@ -383,25 +379,39 @@ def customer_trackmyspending():
             else:
                 data1 = data1[0]
             
-            month = [1,2,3,4,5,6]
+            month = [0,1,2,3,4,5]
             monthly_spending = [0,0,0,0,0,0]
 
             query2 = "select year(date_sub(date(now()), interval {} month)) as year, month(date_sub(date(now()), interval {} month)) as month, sum(price) from ticket natural join purchases natural join flight where customer_email= \'{}\' AND year(purchase_date) = year(date_sub(date(now()), interval {} month)) and month(purchase_date)= month(date_sub(date(now()), interval {} month))"
-            
+
             for i in range(6):
+
                 with cnx.cursor() as cursor:
                     cursor.execute(query2.format(f"{month[i]}", f"{month[i]}", email, f"{month[i]}", f"{month[i]}"))
                     data2 = cursor.fetchone()
                     if data2[2]:
                         monthly_spending[i] = int(data2[2])
+
+            currentMonth = int(datetime.now().month) - 1
+            months = ['January', 'February', 'March', 'April', 'May', 'June' ,'July', 'August', 'September', 'October', 'November', 'December']
+
+            for i in range(len(month)):
+                month[i] = months[currentMonth-month[i]]
+
+            month = month[::-1]
+            monthly_spending = monthly_spending[::-1]
+
             fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
             ax1.bar(month, height=monthly_spending)
             ax1.set_title(f'Monthly spending of {email}')
             ax1.set_xlabel('Month')
             ax1.set_ylabel('Spending')
-            
+            fig.savefig('graph.png')
 
-            return Response(0).addData(Data('months', month)).addData('spending', monthly_spending).json()
+            return send_file('graph.png')
+
+            #return Response(0).addData(Data('months', month)).addData(Data('spending', monthly_spending)).json()
+            return Response(0).addData(Data('graph', open('graph.png'))).json()
 
 
     elif start_month > end_month or start_year > end_year:
