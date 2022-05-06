@@ -295,6 +295,7 @@ def customer_viewmyflights():
             new.data['arrival_date'] = arrival_dt.split(" ")[0]
             new.data['arrival_time'] = arrival_dt.split(" ")[1]
 
+
             departure_dt = new.data['departure_time']
             new.data['departure_date'] = departure_dt.split(" ")[0]
             new.data['departure_time'] = departure_dt.split(" ")[1]
@@ -413,6 +414,7 @@ def customer_trackmyspending():
             
             cur.execute(query)
 
+
             rv = cur.fetchall()
             for i in rv:
                 month.append(i[1])
@@ -427,6 +429,7 @@ def customer_trackmyspending():
                 month[i] = str(months[month[i] - 1]) + " " + str(year)
                 
             return Response(0).addData(Data('months', month)).addData(Data('spending', monthly_spending)).json()
+
 
 @app.route('/customer_logout')
 def customer_logout():
@@ -460,6 +463,7 @@ def bookingagent_viewmyflights():
             new.data['departure_date'] = departure_dt.split(" ")[0]
             new.data['departure_time'] = departure_dt.split(" ")[1]
             data.append(new)
+
 
     return Response(0).addList('result', data).json()
 
@@ -740,6 +744,7 @@ def staff_addairplane():
 
     except Exception as e:
         err = 'Add airplane failed!'
+        print(e)
         return ErrorResponse(err).json()
 
 
@@ -767,7 +772,9 @@ def staff_addairport():
 
         except Exception as e:
             err = 'Add airport failed!'
+            print(e)
             return ErrorResponse(err).json()
+
 
     else:
         return ErrorResponse('Permission not granted').json()
@@ -821,9 +828,10 @@ def staff_viewfrequentcustomers():
             cursor.execute(query)
             data2 = cursor.fetchall()
 
-            except Exception as e:
-                err = 'Customer not found!'
-                return ErrorResponse(err).json()
+        except Exception as e:
+            err = 'Customer not found!'
+            print(e)
+            return ErrorResponse(err).json()
 
     return Response(0).addData(Data('result1', data1)).addData(Data('result2', data2)).json()
 
