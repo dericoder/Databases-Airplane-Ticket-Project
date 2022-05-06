@@ -98,11 +98,11 @@ class LoginClass extends React.Component {
 
     render() {
         if(this.state.user !== 'null')
-            return <Navigate to={{pathname: '/profile'}} />;
+            return <Navigate to={{pathname: '/'}} />;
 
         return (
             <Container id="form">
-                <Label className="mt-3 notification-error" hidden={!this.state.error}>
+                <Label className="mt-3 ml-0 notification-error" hidden={!this.state.error}>
                     {this.state.errorMessage}
                 </Label>
 

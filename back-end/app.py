@@ -290,7 +290,7 @@ def customer_purchaseflights():
 
         with cnx.cursor(pymysql.cursors.DictCursor) as cur:
             #look for upcoming flights that the customer has not bought yet
-            query1 = "select flight.flight_num from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != {customer} and flight.status = 'Upcoming'"
+            query1 = f"select flight.flight_num from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != \'{customer}\' and flight.status = 'Upcoming'"
             cur.execute(query1)
             data = cur.fetchall()
             
@@ -298,7 +298,7 @@ def customer_purchaseflights():
                 return 'No flights available'
             else:
                 for i in range(len(data)):
-                    if data[i]['flight_num'] == flight_num:
+                    if data[i]['flight_num'] == int(flight_num):
                         with cnx.cursor() as cursor:
                         #look for the maximum number of ticket_id
                             query2 = 'select max(ticket_id) from ticket'
@@ -310,17 +310,15 @@ def customer_purchaseflights():
                                 new_id = int(ticket_id[0]) + 1
                             today = date.today()
                             today = today.strftime("%Y-%m-%d")
-                            query3 = f'insert into purchases values ({new_id}, {customer}, null, {today})'
-                            cur.execute(query3)
-                            query4 = f'insert into ticket values ({new_id}, {airline_name}, {flight_num})'
+                            query4 = f'insert into ticket values ({new_id}, \'{airline_name}\', {flight_num})'
                             cur.execute(query4)
+                            query3 = f'insert into purchases values ({new_id}, \'{customer}\', null, \'{today}\')'
+                            cur.execute(query3)
                             cnx.commit()
 
-                            return 'Ticket purchase successful!'
-                    else:
-                        continue
-                    
-                return 'Ticket purchase unsuccessful!'
+                            return Response(0).addData(Data('result', 'Ticket purchase successful'))
+
+                return Response(-1).addData(Data('reason', 'Could not find that flight'))
 
                     
 
@@ -366,82 +364,82 @@ def customer_searchforflights():
 
 @app.route('/customer_trackmyspending', methods = ['GET', 'POST'])
 def customer_trackmyspending():
-    customer_email = request.args[Customer.EMAIL]
+    email = request.args.get('email')
+    start_year = int(request.args.get('start_year'))
+    end_year = int(request.args.get('end_year'))
+    start_month = int(request.args.get('start_month'))
+    end_month = int(request.args.get('end_month'))
 
-    if customer_email in session:
-        email = request.args.get('email')
-        start_year = int(request.args.get('start_year'))
-        end_year = int(request.args.get('end_year'))
-        start_month = int(request.args.get('start_month'))
-        end_month = int(request.args.get('end_month'))
+    if not start_month or not end_month:
+        with cnx.cursor() as cur:
+            query1 = f"select customer_email, sum(price) from purchases natural join ticket natural join flight where customer_email = '{email}' and purchase_date between date_sub(date(now()), interval 1 year) and date(now());"
+            cur.execute(query1)
+            data1 = cur.fetchone()
+            if not data1:
+                data1 = "0"
+            else:
+                data1 = data1[0]
+            
+            month = [1,2,3,4,5,6]
+            monthly_spending = [0,0,0,0,0,0]
 
-        if not start_month or not end_month:
-            with cnx.cursor() as cur:
-                query1 = f"select customer_email, sum(price) from purchases natural join ticket natural join flight where customer_email = {email} and purchase_date between date_sub(date(now()), interval 1 year) and date(now());"
-                cur.execute(query1)
-                data1 = cur.fetchone()
-                if not data1:
-                    data1 = "0"
-                else:
-                    data1 = data1[0]
+            query2 = "select year(date_sub(date(now()), interval {} month)) as year, month(date_sub(date(now()), interval {} month)) as month, sum(price) from ticket natural join purchases natural join flight where customer_email= \'{}\' AND year(purchase_date) = year(date_sub(date(now()), interval {} month)) and month(purchase_date)= month(date_sub(date(now()), interval {} month))"
+            
+            for i in range(6):
+                with cnx.cursor() as cursor:
+                    cursor.execute(query2.format(f"{month[i]}", f"{month[i]}", email, f"{month[i]}", f"{month[i]}"))
+                    data2 = cursor.fetchone()
+                    if data2[2]:
+                        monthly_spending[i] = int(data2[2])
+            fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
+            ax1.bar(month, height=monthly_spending)
+            ax1.set_title(f'Monthly spending of {email}')
+            ax1.set_xlabel('Month')
+            ax1.set_ylabel('Spending')
+            
+
+            return Response(0).addData(Data('months', month)).addData('spending', monthly_spending).json()
+
+
+    elif start_month > end_month or start_year > end_year:
+        return ErrorResponse('Starting month cannot be later than ending month!').json()
+    
+    else:
+        with cnx.cursor() as cur:
+            query1 = f"select customer_email, sum(price) from purchases natural join ticket natural join flight where customer_email = {email} and purchase_date between date('{start_year}-0{start_month}-01') and date('{end_year}-0{end_month}-01');"
+            cur.execute(query1)
+            data1 = cur.fetchone()
+            if not data1:
+                data1 = "0"
+            else:
+                data1 = data1[0]
+
+            month = []
+            monthly_spending = []
+            
+            interval = end_month-start_month
+            for i in range(interval):
+                month.append(interval+1)
+
+            k = 0
+            query2 = f"select sum(price) from ticket natural join purchases natural join flight where customer_email= {email} AND year(purchase_date) = year(date('{start_year}-0{start_month+k}-01')) and month(purchase_date)= month(date('{end_year}-0{end_month+k}-01'))"
+
+            for i in range(interval):
+                with cnx.cursor() as cursor:
+                    cursor.execute(query2)
+                    data2 = cursor.fetchone()
+                    k += 1 
+                    if data2[0]:
+                        monthly_spending[i] = int(data2[0])
+            fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
+            ax1.bar(month, height=monthly_spending)
+            ax1.set_title(f'Monthly spending of {email}')
+            ax1.set_xlabel('Month')
+            ax1.set_ylabel('Spending')
                 
-                month = [1,2,3,4,5,6]
-                monthly_spending = [0,0,0,0,0,0]
-
-                query2 = "select year(date_sub(date(now()), interval {} month)) as year, month(date_sub(date(now()), interval {} month)) as month, sum(price) from ticket natural join purchases natural join flight where customer_email= {} AND year(purchase_date) = year(date_sub(date(now()), interval {} month)) and month(purchase_date)= month(date_sub(date(now()), interval {} month))"
-                
-                for i in range(6):
-                    with cnx.cursor() as cursor:
-                        cursor.execute(query2.format(f"{month[i]}", f"{month[i]}", email, f"{month[i]}", f"{month[i]}"))
-                        data2 = cursor.fetchone()
-                        if data2[2]:
-                            monthly_spending[i] = int(data2[2])
-                fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
-                ax1.bar(month, height=monthly_spending)
-                ax1.set_title(f'Monthly spending of {email}')
-                ax1.set_xlabel('Month')
-                ax1.set_ylabel('Spending')
-                
-                return {'status': 0, 'result': [data1, month, monthly_spending]}
-
-
-        elif start_month > end_month or start_year > end_year:
-            return ErrorResponse('Starting month cannot be later than ending month!').json()
-        
-        else:
-            with cnx.cursor() as cur:
-                query1 = f"select customer_email, sum(price) from purchases natural join ticket natural join flight where customer_email = {email} and purchase_date between date('{start_year}-0{start_month}-01') and date('{end_year}-0{end_month}-01');"
-                cur.execute(query1)
-                data1 = cur.fetchone()
-                if not data1:
-                    data1 = "0"
-                else:
-                    data1 = data1[0]
-
-                month = []
-                monthly_spending = []
-                
-                interval = end_month-start_month
-                for i in range(interval):
-                    month.append(interval+1)
-
-                k = 0
-                query2 = f"select sum(price) from ticket natural join purchases natural join flight where customer_email= {email} AND year(purchase_date) = year(date('{start_year}-0{start_month+k}-01')) and month(purchase_date)= month(date('{end_year}-0{end_month+k}-01'))"
-
-                for i in range(interval):
-                    with cnx.cursor() as cursor:
-                        cursor.execute(query2)
-                        data2 = cursor.fetchone()
-                        k += 1 
-                        if data2[0]:
-                            monthly_spending[i] = int(data2[0])
-                fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
-                ax1.bar(month, height=monthly_spending)
-                ax1.set_title(f'Monthly spending of {email}')
-                ax1.set_xlabel('Month')
-                ax1.set_ylabel('Spending')
-                    
-                return {'status': 0, 'result': [month, monthly_spending]}
+            return {'status': 0, 'result': [month, monthly_spending]}
+            
+    return ErrorResponse('Server error').json()
 
 @app.route('/customer_logout')
 def customer_logout():

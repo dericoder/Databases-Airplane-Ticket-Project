@@ -104,13 +104,23 @@ class SearchClass extends React.Component {
         return valid;
     }
 
-    purchaseFlightTicket() {
+    purchaseFlightTicket(info) {
         if(this.props.allCookies['user'] === 'null') {
             this.setState({loggedIn: false})
             return;
         }
 
-        console.log("purchasing")
+        axios.post('http://localhost:5000/customer_purchasetickets', null, {
+            params: {
+                email: this.props.allCookies['user']['email'],
+                airline_name: info.airline_name,
+                flight_num: info.flight_num
+            }
+        }).then((res) => {
+            console.log(res)
+        }).catch(() => {
+            console.log("Server error")
+        });
     }
 
     render() {
@@ -211,7 +221,7 @@ class FlightInfo extends React.Component {
                 </Container>
                 <Container id="flightlist-price">
                     <Label>{'$' + this.props.info[Flight.PRICE]}</Label>
-                    <Button onMouseUp={this.props.purchaseFlightTicket} style={{'margin-top': 'auto', 'width': '100px', 'margin-left': 'auto'}}>Purchase</Button>
+                    <Button onMouseUp={() => this.props.purchaseFlightTicket(this.props.info)} style={{'margin-top': 'auto', 'width': '100px', 'margin-left': 'auto'}}>Purchase</Button>
                 </Container>
             </Container>
         );

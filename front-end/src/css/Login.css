@@ -27,20 +27,7 @@
     justify-content: center;
     align-items: center;
     color: rgb(151, 102, 102);
-}
-
-.notification-registered {
-    width: 100%;
-    padding-top: 20px;
-    padding-bottom: 20px;
-    height: fit-content;
-    border: 1px solid rgb(153, 255, 153);
-    background-color: rgb(179, 255, 189);
-    border-radius: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: rgb(66, 114, 68);
+    margin-left: 0 !important;
 }
 
 #footer {
