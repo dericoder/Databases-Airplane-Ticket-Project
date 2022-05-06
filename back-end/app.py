@@ -281,7 +281,6 @@ def customer_viewmyflights():
     customer = request.args[Customer.EMAIL]
 
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:    
-<<<<<<< HEAD
         query = f"select distinct * from flight natural join purchases natural join ticket where purchases.customer_email = '{customer}' and flight.status = 'Upcoming'"
         cur.execute(query)
         rv = cur.fetchall()
@@ -295,21 +294,6 @@ def customer_viewmyflights():
             arrival_dt = new.data['arrival_time']
             new.data['arrival_date'] = arrival_dt.split(" ")[0]
             new.data['arrival_time'] = arrival_dt.split(" ")[1]
-=======
-        if criteria == None and value == None:    
-            query = f"select distinct * from flight natural join purchases natural join ticket where purchases.customer_email = {customer} and flight.status = 'Upcoming'"
-            cur.execute(query)
-            data = cur.fetchall()
-        else:
-            query = f"select distinct * from flight natural join purchases natural join ticket where purchases.customer_email = {customer} and flight.status = 'Upcoming' and "
-            
-            for k in criteria.keys():
-                query += k + "='" + str(criteria[k]) + "' and"
-            query = query[:-(len('and '))]
-
-            cur.execute(query)
-            data = cur.fetchall()
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
 
             departure_dt = new.data['departure_time']
             new.data['departure_date'] = departure_dt.split(" ")[0]
@@ -416,23 +400,7 @@ def customer_trackmyspending():
             month = month[::-1]
             monthly_spending = monthly_spending[::-1]
 
-<<<<<<< HEAD
             return Response(0).addData(Data('months', month)).addData(Data('spending', monthly_spending)).json()
-=======
-            fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
-            ax1.bar(month, height=monthly_spending)
-            ax1.set_title(f'Monthly spending of {email}')
-            ax1.set_xlabel('Month')
-            ax1.set_ylabel('Spending')
-            fig.savefig('graph.png')
-
-            return Response(0).addData(Data('month', month)).addData('monthly_spending', monthly_spending)
-
-
-    elif start_month > end_month or start_year > end_year:
-        return ErrorResponse('Starting month cannot be later than ending month!').json()
-    
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
     else:
         with cnx.cursor() as cur:
 
@@ -443,26 +411,13 @@ def customer_trackmyspending():
             month = []
             monthly_spending = []
             
-<<<<<<< HEAD
             cur.execute(query)
-=======
-            interval = end_month-start_month
-            for i in range(interval):
-                month.append(interval)
-
-            currentMonth = int(datetime.now().month) - 1
-            months = ['January', 'February', 'March', 'April', 'May', 'June' ,'July', 'August', 'September', 'October', 'November', 'December']
-
-            for i in range(len(month)):
-                month[i] = months[currentMonth-month[i]]
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
 
             rv = cur.fetchall()
             for i in rv:
                 month.append(i[1])
                 monthly_spending.append(i[0])
 
-<<<<<<< HEAD
             previousMonth = month[0]
             for i in range(len(month)):
                 year = start_year
@@ -472,27 +427,6 @@ def customer_trackmyspending():
                 month[i] = str(months[month[i] - 1]) + " " + str(year)
                 
             return Response(0).addData(Data('months', month)).addData(Data('spending', monthly_spending)).json()
-=======
-            for i in range(interval):
-                with cnx.cursor() as cursor:
-                    cursor.execute(query2)
-                    data2 = cursor.fetchone()
-                    k += 1 
-                    if data2[0]:
-                        monthly_spending[i] = int(data2[0])
-
-            month = month[::-1]
-            monthly_spending = monthly_spending[::-1]
-
-            fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
-            ax1.bar(month, height=monthly_spending)
-            ax1.set_title(f'Monthly spending of {email}')
-            ax1.set_xlabel('Month')
-            ax1.set_ylabel('Spending')
-                
-            return Response(0).addData(Data('month', month)).addData('monthly_spending', monthly_spending)
-            
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
 
 @app.route('/customer_logout')
 def customer_logout():
@@ -508,7 +442,6 @@ def customer_logout():
 def bookingagent_viewmyflights():
     agent_id = request.args[Agent.BOOKING_AGENT_ID]
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:   
-<<<<<<< HEAD
         query = f"select distinct * from flight natural join purchases natural join ticket where purchases.booking_agent_id = {agent_id} and flight.status = 'Upcoming'"
         cur.execute(query)
         rv = cur.fetchall()
@@ -527,19 +460,6 @@ def bookingagent_viewmyflights():
             new.data['departure_date'] = departure_dt.split(" ")[0]
             new.data['departure_time'] = departure_dt.split(" ")[1]
             data.append(new)
-=======
-        if criteria != None and value!= None:
-            query = f"select distinct * from flight natural join purchases natural join ticket where purchases.booking_agent_id = {agent_id} and flight.status = 'Upcoming' and "
-            for k in criteria.keys():
-                query += k + "='" + str(criteria[k]) + "' and"
-            query = query[:-(len('and '))]
-            cur.execute(query)
-            data = cur.fetchall()
-        else:
-            query = f"select distinct * from flight natural join purchases natural join ticket where purchases.booking_agent_id = {agent_id} and flight.status = 'Upcoming'"
-            cur.execute(query)
-            data = cur.fetchall()
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
 
     return Response(0).addList('result', data).json()
 
@@ -636,20 +556,10 @@ def bookingagent_viewmycommission():
     start_date = None
     end_date = None
 
-<<<<<<< HEAD
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
 
     if not start_date or not end_date:
-=======
-    if request.method == 'POST':
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
-    else:
-        pass
-
-    if start_date == None and end_date == None:
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
         with cnx.cursor(pymysql.cursors.DictCursor) as cur:
             #assume commission is 10% of ticket price
 
@@ -828,16 +738,9 @@ def staff_addairplane():
 
         return 'Airplane added!'
 
-<<<<<<< HEAD
-        except Exception as e:
-            err = 'Add airplane failed!'
-            return ErrorResponse(err).json()
-=======
     except Exception as e:
         err = 'Add airplane failed!'
-        print(e)
         return ErrorResponse(err).json()
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
 
 
 
@@ -862,16 +765,9 @@ def staff_addairport():
 
             return 'Airport added!'
 
-<<<<<<< HEAD
-            except Exception as e:
-                err = 'Add airport failed!'
-                return ErrorResponse(err).json()
-=======
         except Exception as e:
             err = 'Add airport failed!'
-            print(e)
             return ErrorResponse(err).json()
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
 
     else:
         return ErrorResponse('Permission not granted').json()
@@ -925,16 +821,9 @@ def staff_viewfrequentcustomers():
             cursor.execute(query)
             data2 = cursor.fetchall()
 
-<<<<<<< HEAD
             except Exception as e:
                 err = 'Customer not found!'
                 return ErrorResponse(err).json()
-=======
-        except Exception as e:
-            err = 'Customer not found!'
-            print(e)
-            return ErrorResponse(err).json()
->>>>>>> 34c4f315298f43c043eb5e241484cfd7af759066
 
     return Response(0).addData(Data('result1', data1)).addData(Data('result2', data2)).json()
 
