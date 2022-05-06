@@ -11,6 +11,8 @@ import Register from "./components/Register";
 import Profile from "./components/Profile"
 import Search from "./components/SearchFlights"
 import CustomerSpendings from "./components/CustomerSpendings"
+import BookedFlights from "./components/BookedFlights"
+import AgentProfile from "./components/AgentCommissions"
 import { Cookies, useCookies, withCookies } from 'react-cookie'
 import { instanceOf } from 'prop-types'
 import { Constants } from "./Utils"
@@ -45,20 +47,21 @@ class Bar extends React.Component {
     if(this.state.loggedOut === 'true')
       return <Navigate to={{pathname: '/login'}} />;
 
-    const CustomerMenu = () => {
-      return (
-        <NavDropdown title={this.state.user.email} id="basic-nav-dropdown">
-          <NavDropdown.Item as={Link} to={"/customer_spendings"}>My spendings</NavDropdown.Item>
-          <NavDropdown.Item onMouseUp={this.logout}>Logout</NavDropdown.Item>
-        </NavDropdown>
-      )
-    }
-
     const Log = () => {
         return(
           <Nav.Link as ={Link} to={"/login"}>Login/Register</Nav.Link>
         );
     } 
+
+    const Menu = () => {
+      return (
+        <NavDropdown title={this.state.user.email} id="basic-nav-dropdown">
+          <NavDropdown.Item as={Link} to={"/customer_spendings"} hidden={this.state.type.toString() !== Constants.CUSTOMER.toString()}>My spendings</NavDropdown.Item>
+          <NavDropdown.Item as={Link} to={"/agent_profile"} hidden={this.state.type.toString() !== Constants.AGENT.toString()}>My profile</NavDropdown.Item>
+          <NavDropdown.Item onMouseUp={this.logout}>Logout</NavDropdown.Item>
+        </NavDropdown>
+      );
+    }
 
     return (
       <Container id="root">
@@ -70,12 +73,12 @@ class Bar extends React.Component {
                 <Nav.Link as={Link} to={"/"}>Home</Nav.Link>
                 <NavDropdown title="Flights" id="basic-nav-dropdown">
                   <NavDropdown.Item as={Link} to={"/search_flights"}>Search flights</NavDropdown.Item>
-                  <NavDropdown.Item as={Link} to={"/booked_flights"}>My flights</NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to={"/booked_flights"} hidden={this.state.user === 'null'}>My flights</NavDropdown.Item>
                 </NavDropdown>
               </Nav>
               <Nav className="justify-content-end">
                 {
-                  this.state.user === 'null' ? <Log /> : (this.state.type === Constants.CUSTOMER.toString() ? <CustomerMenu /> : <></>)
+                  this.state.user === 'null' ? <Log /> : <Menu />
                 }
               </Nav>
               </Navbar.Collapse>
@@ -87,6 +90,8 @@ class Bar extends React.Component {
             <Route path='/profile' caseSensitive={false} element={<Profile />} />
             <Route path='/search_flights' caseSensitive={false} element={<Search />} />
             <Route path='/customer_spendings' caseSensitive={false} element={<CustomerSpendings />} />
+            <Route path='/booked_flights' caseSensitive={false} element={<BookedFlights />} />
+            <Route path='/agent_profile' caseSensitive={false} element={<AgentProfile />} />
             <Route path='/' caseSensitive={false} element={<Home />} />
           </Routes>
         </Container>

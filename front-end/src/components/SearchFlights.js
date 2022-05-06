@@ -1,12 +1,13 @@
 import "../css/SearchFlights.css"
 import React from 'react';
 import { withCookies, Cookies } from 'react-cookie'
-import { Container, Form, Button, FloatingLabel as Label, Row, Col } from 'react-bootstrap'
+import { Container, Form, Button, FloatingLabel as Label } from 'react-bootstrap'
 import { instanceOf } from 'prop-types'
-import { Airports, Flight } from '../Utils'
+import { Airports, Constants } from '../Utils'
 import { Typeahead } from 'react-bootstrap-typeahead'
 import axios from "axios";
 import { Navigate } from "react-router-dom"
+import FlightList from './FlightList'
 
 class SearchClass extends React.Component {
 
@@ -23,7 +24,9 @@ class SearchClass extends React.Component {
             dateValidated: true,
             arrival: "",
             departure: "",
-            flights: []
+            flights: [],
+            error: false,
+            success: false
         }
 
         this.validate = this.validate.bind(this);
@@ -52,11 +55,13 @@ class SearchClass extends React.Component {
             let flightResults = res.data.flights;
 
             if(flightResults.length === 0) {
-                this.setState({error: true, errorMessage: "No flights found", flights: []})
+                this.setState({error: true, errorMessage: "No flights found", flights: [], success: false, successMessage: ''})
             } else {
                 let state = {
                     error: false,
                     errorMessage: "",
+                    success: false,
+                    successMessage: "",
                     flights: flightResults
                 }
                 this.setState(state)
@@ -117,9 +122,15 @@ class SearchClass extends React.Component {
                 flight_num: info.flight_num
             }
         }).then((res) => {
+            let response = res['data'];
+
+            if(response[Constants.STATUS] === 0)
+                this.setState({error: false, errorMessage: '', success: true, successMessage: response['result']});
+            else
+                this.setState({error: true, errorMessage: response[Constants.REASON], success: false, successMessage: ''});
             console.log(res)
         }).catch(() => {
-            console.log("Server error")
+            this.setState({error: true, errorMessage: 'Server error', success: false, successMessage: ''})
         });
     }
 
@@ -132,7 +143,10 @@ class SearchClass extends React.Component {
 
         return (
             <Container id="searchContainer">
-                <Label className="mb-3 notification-success-list">
+                <h1 style={{'margin-bottom': '20px'}}>Search Flights</h1>
+                <hr></hr>
+
+                <Label className="mb-3 notification-success-list" hidden={!this.state.success}>
                     {this.state.successMessage}
                 </Label>
                 <Label className="mt-3 mb-3 notification-error-search" hidden={!this.state.error}>
@@ -186,47 +200,16 @@ class SearchClass extends React.Component {
                 <Container className="mt-5 ps-0 pe-0" id="flightlist">
                     {
                         this.state.flights.length > 0 ? this.state.flights.map((data) => {
-                                return <FlightInfo info={data} purchaseFlightTicket={this.purchaseFlightTicket}/>
+                                return (
+                                        <FlightList info={data} purchaseFlightTicket={this.purchaseFlightTicket}>
+                                            <Button onMouseUp={() => this.purchaseFlightTicket(data)} className="purchaseTicketButton">Purchase</Button>
+                                        </FlightList>
+                                       );
                             }) : ''
                     }
                 </Container>
             </Container>
         )
-    }
-}
-
-class FlightInfo extends React.Component {
-    render() {
-        return (
-            <Container className="mb-3 pt-3 pb-3" id="flightlist-container">
-                <Container id="flightlist-info">
-                    <Container id="flightlist-flight">
-                        <Label style={{'font-size': '20px'}}>{this.props.info[Flight.AIRLINE]}</Label>
-                        <Label style={{'font-size': '15px'}}>{this.props.info[Flight.AIRPLANE]}</Label>
-                    </Container>
-                    <Container id="flightlist-airports">
-                        <Row>
-                            <Col style={{'text-align': 'center'}}>
-                                <Label>{this.props.info[Flight.DEPARTURE_TIME]}</Label>
-                                <Label>{this.props.info[Flight.DEPARTURE_AIRPORT]}</Label>
-                            </Col>
-                            <Col style={{'text-align': 'center', 'justify-content': 'center'}}>
-                                <Label>1h30min</Label>
-                                <Label>{'\u2501\u2501\u2501\u2501\u2501\u2501'}</Label>
-                            </Col>
-                            <Col style={{'text-align': 'center'}}>
-                                <Label>{this.props.info[Flight.ARRIVAL_TIME]}</Label>
-                                <Label>{this.props.info[Flight.ARRIVAL_AIRPORT]}</Label>
-                            </Col>
-                        </Row>
-                    </Container>
-                </Container>
-                <Container id="flightlist-price">
-                    <Label>{'$' + this.props.info[Flight.PRICE]}</Label>
-                    <Button onMouseUp={() => this.props.purchaseFlightTicket(this.props.info)} style={{'margin-top': 'auto', 'width': '100px', 'margin-left': 'auto'}}>Purchase</Button>
-                </Container>
-            </Container>
-        );
     }
 }
 

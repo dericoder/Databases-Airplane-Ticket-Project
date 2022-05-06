@@ -34,7 +34,7 @@ class Constants {
     // agent constants
     static AGENT_EMAIL = 'email';
     static AGENT_PASSWORD = 'password';
-    static AGENT_ID = 'id';
+    static AGENT_ID = 'booking_agent_id';
 }
 
 class Staff {
@@ -64,9 +64,9 @@ class Customer {
 }
 
 class Agent {
-    constructor(email, id) {
+    constructor(email, booking_agent_id) {
         this.email = email;
-        this.id = id;
+        this.booking_agent_id = booking_agent_id;
     }
 }
 

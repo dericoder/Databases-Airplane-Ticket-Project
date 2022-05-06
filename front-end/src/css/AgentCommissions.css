@@ -1,0 +1,27 @@
+.agentProfileContainer {
+    margin-top: 100px !important;
+}
+
+.commissionsContainer {
+    width: 100%;
+    height: fit-content;
+    display: flex;
+}
+
+.dateContainer {
+    width: 450px;
+    height: fit-content;
+    display: block;
+}
+
+.monthYearContainer {
+    display: flex;
+}
+
+.monthYearPicker {
+    width: fit-content;
+}
+
+.filterButton {
+    width: 100%;
+}
