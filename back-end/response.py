@@ -56,7 +56,7 @@ class Staff(Data):
     FNAME = 'first_name'
     LNAME = 'last_name'
     DOB = 'date_of_birth'
-    WORKS = 'works_for'
+    WORKS = 'airline_name'
 
     def __init__(self, username, fName, lName, dob, works):
         super().__init__()

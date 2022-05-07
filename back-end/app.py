@@ -27,6 +27,7 @@ from datetime import datetime
 import numpy as np
 import base64
 from io import BytesIO
+import json
 
 CUSTOMER = 1
 AGENT = 2
@@ -176,7 +177,7 @@ def register():
 
         except Exception as e:
             with cnx.cursor() as cur:
-                checkAirline = 'select * from airline where name=\'{}\''.format(airline_name)
+                checkAirline = 'select * from airline where airline_name=\'{}\''.format(airline_name)
                 cur.execute(checkAirline)
                 data = cur.fetchone()
 
@@ -254,8 +255,16 @@ def login():
                 else:
                     staff = Staff(data[Staff.USERNAME], data[Staff.FNAME], 
                                     data[Staff.LNAME], data[Staff.DOB], data[Staff.WORKS])
-                    session[data[Staff.USERNAME]] = staff.data
-                    return Response(0).addData(staff).json()
+
+                    permissionQuery = f"select * from permission where username='{user}'"
+
+                    cur.execute(permissionQuery)
+                    permissions = []
+                    rv = cur.fetchall()
+                    for d in rv:
+                        permissions.append(d['permission_type'])
+
+                    return Response(0).addData(staff).addData(Data('permissions', permissions)).json()
 
     elif type == AGENT:
         with cnx.cursor(pymysql.cursors.DictCursor) as cur:
@@ -276,8 +285,9 @@ def login():
     return ErrorResponse('A server error occurred')
 
 #CUSTOMER USE CASES
-@app.route('/customer_viewmyflights', methods = ['GET','POST'])
+@app.route('/customer_viewmyflights', methods = ['GET'])
 def customer_viewmyflights():
+    print(request.args)
     customer = request.args[Customer.EMAIL]
 
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:    
@@ -430,7 +440,6 @@ def customer_trackmyspending():
                 
             return Response(0).addData(Data('months', month)).addData(Data('spending', monthly_spending)).json()
 
-
 @app.route('/customer_logout')
 def customer_logout():
     customer_email = request.args[Customer.EMAIL]
@@ -468,18 +477,19 @@ def bookingagent_viewmyflights():
     return Response(0).addList('result', data).json()
 
 
-@app.route('/bookingagent_purchasetickets', methods = ['GET', 'POST'])
+@app.route('/bookingagent_purchasetickets', methods = ['POST'])
 def bookingagent_purchase():
-    customer = request.args[Customer.EMAIL]
+    email = request.args[Agent.EMAIL]
+    customer = request.args['customer']
     airline_name = request.args.get('airline_name')
     flight_num = request.args.get('flight_num')
 
     with cnx.cursor() as curr:  
-        query = f"SELECT airline_name from booking_agent_work_for where email = '{Agent.EMAIL}'"
+        query = f"SELECT airline_name from booking_agent_work_for where email = '{email}'"
         curr.execute(query)
         dataa = curr.fetchone()
         agent_airline_name = dataa[0]
-        q = f"SELECT booking_agent_id from booking_agent where email = '{Agent.EMAIL}'"
+        q = f"SELECT booking_agent_id from booking_agent where email = '{email}'"
         curr.execute(q)
         agent_id = curr.fetchone()
         booking_agent_id = agent_id[0]
@@ -488,11 +498,15 @@ def bookingagent_purchase():
         if airline_name != agent_airline_name:
             return ErrorResponse('Cannot purchase flights from a different airline!').json()
 
-        findFlights = f"select * from ticket natural join purchases where flight_num={flight_num} and airline_name='{airline_name}'"
+        findCustomer = f'select * from customer where email=\'{customer}\''
+        cur.execute(findCustomer)
+        if(len(cur.fetchall()) == 0):
+            return ErrorResponse('Customer not found').json()
+
+        findFlights = f"select * from ticket natural join purchases where flight_num={flight_num} and airline_name='{airline_name}' and customer_email='{customer}'"
         cur.execute(findFlights)
         data = cur.fetchall()
 
-        print(data)
         if(len(data) > 0):
             return ErrorResponse('A customer cannot buy the same ticket more than once').json()
         else:
@@ -633,26 +647,26 @@ def bookingagent_logout():
 
 #airline staff use cases
 
-@app.route('/staff_viewmyflights', methods = ['GET','POST'])
+@app.route('/staff_viewmyflights', methods = ['GET'])
 def staff_viewmyflights():
-    staff_username = request.args[Staff.USERNAME]
-    criteria = request.args['criteria']
-    flight_number = request.args['flight_number']
-
     staff_airline = request.args[Staff.WORKS]
+    arrival = request.args['arrival'] if request.args['arrival'] != '' else '%'
+    departure = request.args['departure'] if request.args['departure'] != '' else '%'
+    startDate = "'" + request.args['startDate'] + "'" if request.args['startDate'] != '' else 'NOW()'
+    endDate = "'" + request.args['endDate'] + "'" if request.args['endDate'] != '' else 'ADDTIME(NOW(), \'30 0:0:0\')'
 
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-        if criteria == None:
-            query = f"select * from flight where airline_name = '{staff_airline}' and (departure_time BETWEEN NOW() AND ADDTIME(NOW(), '30 0:0:0'))"
-        else:
-            query = f"select * from flight where airline_name = {staff_airline} and "
-            
-            for k in criteria.keys():
-                query += k + "='" + str(criteria[k]) + "' and"
-            query = query[:-(len('and '))]
+        query = f"select * from flight where airline_name=\'{staff_airline}\' and arrival_airport LIKE \'{arrival}\' and departure_airport LIKE \'{departure}\' and (departure_time BETWEEN {startDate} AND {endDate})"
 
         cur.execute(query)
         data1 = cur.fetchall()
+
+    return Response(0).addData(Data('result1', data1)).json()
+
+@app.route('/staff_viewcustomers', methods=['GET'])
+def staff_viewcustomer():
+    flight_number = request.args['flight_number']
+    airline_name = request.args['airline_name']
 
     if flight_number is not None:
         query = f"select customer_email, flight_num from purchases natural join ticket where flight_num ='{flight_number}'"
@@ -660,57 +674,47 @@ def staff_viewmyflights():
             cur.execute(query)
             data2 = cur.fetchall()
 
-    return Response(0).addData(Data('result1', data1)).addData(Data('result2', data2)).json()
+    return ''
 
 
-
-
-@app.route('/staff_createnewflights', methods = ['GET', 'POST'])
-def staff_purchaseflights():
+@app.route('/staff_createnewflights', methods = ['POST'])
+def staff_createnewflights():
     staff_username = request.args[Staff.USERNAME]
-    criteria = request.args['criteria']
+    print(request.args)
+    criteria = json.loads(request.args['criteria'])
     with cnx.cursor() as cur:
-        query = f'select permission_type from permission where username = {staff_username}'
+        query = f'select permission_type from permission where username = \'{staff_username}\' and permission_type=\'Admin\''
         cur.execute(query)
-        permission = cur.fetchone()[0]
+        permission = cur.fetchone()
 
-    if permission == 'Admin' or permission == 'Both': 
-        with cnx.cursor() as cur:
-            query2 = "SELECT airline_name FROM airline_staff WHERE username = '{}'".format(session['staff'])
-            cur.execute(query2)
-            airline_name = cur.fetchone()[0]
+    if len(permission) > 0: 
+        crit_value = []
 
-        try:
-            crit_value = [None]*8
-            for i in range(8):
-                keys = list(criteria)
-                crit_value[i] = criteria[keys[i]]
+        for k in criteria:
+            print(k)
+            crit_value.append(escape(criteria[k]))
 
-            query = f"insert into flight values('{airline_name}', '{crit_value[0]}', '{crit_value[1]}', '{crit_value[2]}', '{crit_value[3]}', '{crit_value[4]}', '{crit_value[5]}', '{crit_value[6]}', '{crit_value[7]}')"
-        
-            with cnx.cursor() as cur:
-                cur.execute(query)
-            cnx.commit()
-
-            return 'Flight successfully created!'
-
-        except Exception as e:
-            err = 'Create new flights failed!'
-            return ErrorResponse(err).json()
-    else:
-        return{'status': -1, 'reason': 'Permission not granted!'}
-
-
-@app.route('/staff_changestatus', methods = ['GET', 'POST'])
-def staff_changestatus():
-    staff_username = request.args[Staff.USERNAME]
-
-    staff_airline = request.args[Staff.WORKS]
+        query = f"insert into flight values('{crit_value[0]}', {crit_value[1]}, '{crit_value[2]}', '{crit_value[3]}', '{crit_value[4]}', '{crit_value[5]}', {crit_value[6]}, '{crit_value[7]}', {crit_value[8]})"
     
-    flight_num = request.args.get['flight_number']
-    new_status = request.args.get['new_status']
+        with cnx.cursor() as cur:
+            cur.execute(query)
+        cnx.commit()
 
-    query = f"update flight set status = '{new_status}' where airline_name = '{staff_airline}' and flight_num = '{flight_num}'"
+        return Response(0).addData(Data('result', 'Successfully added flight')).json()
+
+    else:
+        return ErrorResponse("You need to be admin to create flights").json()
+
+
+@app.route('/staff_changestatus', methods = ['POST'])
+def staff_changestatus():
+    print(request.args)
+    staff_username = request.args['username']
+    staff_airline = request.args['airline_name']
+    flight_num = request.args['flight_num']
+    new_status = request.args['status']
+
+    query = f"update flight set status = '{new_status}' where airline_name = '{staff_airline}' and flight_num = '{flight_num}' and airline_name='{staff_airline}'"
    
     try:
         with cnx.cursor() as cur:
@@ -718,11 +722,22 @@ def staff_changestatus():
 
         cnx.commit()
 
-        return 'Flight status changed!'
+        return Response(0).json()
 
     except:
         return {'status': -1, 'reason': 'Change Status failed!'}
 
+
+@app.route('/get_airplanes', methods=['GET'])
+def get_airplanes():
+    airline_name = request.args['airline_name']
+    query = f"select * from airplane where airline_name='{airline_name}'"
+
+    with cnx.cursor() as cur:
+        cur.execute(query)
+        airplanes = cur.fetchall()
+
+    return Response(0).addData(Data('airplanes', airplanes)).json()
 
 @app.route('/staff_addairplane', methods = ['GET', 'POST'])
 def staff_addairplane():
@@ -730,8 +745,8 @@ def staff_addairplane():
 
     staff_airline = request.args[Staff.WORKS]
 
-    airplane_id = request.args.get['new_airplane_id']
-    seats = request.args.get['number_of_seats']
+    airplane_id = request.args['new_airplane_id']
+    seats = request.args['number_of_seats']
 
     try:
         query = f"insert into airplane values('{staff_airline}', '{airplane_id}', '{seats}')"
@@ -740,7 +755,7 @@ def staff_addairplane():
             cur.execute(query)
         cnx.commit()
 
-        return 'Airplane added!'
+        return Response(0).addData(Data('result', 'Airplane added')).json()
 
     except Exception as e:
         err = 'Add airplane failed!'
@@ -796,10 +811,10 @@ def staff_viewbookingagents():
         with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
             #top booking agents based on commission in the past year
             query2 = f"select booking_agent.email, 0.1*sum(flight.price) as commission from booking_agent natural join flight natural join ticket natural join purchases where airline_name = '{staff_airline}' and purchases.purchase_date >= adddate(date(now()), interval -12 month) group by booking_agent.email order by commission desc limit 5"
-            cursor.execute(query)
-            data2 = cur.fetchall()
+            cursor.execute(query2)
+            data2 = cursor.fetchall()
 
-        return Response(0).addData(Data('result1', data1)).addData(Data('result2', data2)).json()
+        return Response(0).addData(Data('ticketSales', data1)).addData(Data('commissions', data2)).json()
 
     except:
         return ErrorResponse('Request Failed!')
@@ -1049,11 +1064,10 @@ def staff_grantnewpermissions():
 
 
 
-
 @app.route('/staff_addbookingagents', methods = ['GET', 'POST'])
 def staff_addbookingagents():
     staff_username = request.args[Staff.USERNAME]
-
+    agent_email = request.args['new_agent_email']
     staff_airline = request.args[Staff.WORKS]
 
     with cnx.cursor() as cur:
@@ -1061,27 +1075,26 @@ def staff_addbookingagents():
         cur.execute(query)
         permission = cur.fetchone()[0]
 
-    with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
-        query = f"select email from booking_agent natural join booking_agent_work_for"
+    with cnx.cursor() as cursor:
+        query = f"select * from booking_agent where email='{agent_email}'"
         cursor.execute(query)
         emails = cursor.fetchall()
 
+        if len(emails) == 0:
+            return ErrorResponse('Booking agent is not registered yet').json()
+
     if permission == 'Admin' or permission == 'Both':
-        agent_email = request.args['new_agent_email']
-        if agent_email not in emails.values():
-            return ErrorResponse('Bookign agent is not registered yet').json()
-        
-        else:
+        try:
+            with cnx.cursor() as cur:
+                query = f"insert into booking_agent_work_for values ('{agent_email}','{staff_airline}')"
+                cur.execute(query)
+            cnx.commit()
 
-            try:
-                with cnx.cursor() as cur:
-                    query = f"insert into booking_agent_work_for values ('{agent_email}','{staff_airline}')"
-                    cur.execute(query)
-                cnx.commit()
+            return Response(0).addData(Data('result', 'Successfully added booking agent')).json()
 
-            except Exception as e:
-                err = 'Agent cannot be added!'
-                return ErrorResponse(err).json()
+        except Exception as e:
+            err = 'Agent cannot be added!'
+            return ErrorResponse(err).json()
 
     else:
         

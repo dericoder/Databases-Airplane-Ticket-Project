@@ -30,7 +30,7 @@ class BookedFlightsClass extends React.Component {
         if(this.state.type.toString() === Constants.CUSTOMER.toString())
             axios.get('http://localhost:5000/customer_viewmyflights', {
                 params: {
-                    email: this.state.user.email[Constants.CUSTOMER_EMAIL]
+                    email: this.state.user.email
                 }
             }).then((res) => {
                 let response = res.data;

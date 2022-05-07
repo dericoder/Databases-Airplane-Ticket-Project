@@ -19,6 +19,7 @@ import {
     TODO:
     1. Average and Total decimal places
     2. Formatting
+    3. per tickets bug
  */
 class AgentProfileClass extends React.Component {
 

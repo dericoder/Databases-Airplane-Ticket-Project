@@ -1,0 +1,11 @@
+.airplanesContainer {
+    width: 600px;
+    height: 200px;
+    margin: 100px;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 0;
+    border-radius: 10px !important;
+}
+
+
