@@ -14,12 +14,15 @@ import CustomerSpendings from "./components/CustomerSpendings"
 import BookedFlights from "./components/BookedFlights"
 import Airplanes from "./components/Airplanes"
 import AgentProfile from "./components/AgentCommissions"
+import AirlineReport from "./components/AirlineReport"
 import { Cookies, useCookies, withCookies } from 'react-cookie'
 import { instanceOf } from 'prop-types'
 import { Constants } from "./Utils"
 import AddFlights from "./components/AddFlights"
 import { Offcanvas } from "react-bootstrap"
 import AirlineAgent from "./components/AirlineAgent"
+import AirlineCustomer from "./components/AirlineCustomer"
+import AirlineStaff from "./components/AirlineStaff"
 
 class Bar extends React.Component {
     static propTypes = {
@@ -93,7 +96,7 @@ class Bar extends React.Component {
                   <Nav className="justify-content-end flex-grow-1 pe-3">
                     <AirlineMenuItem to={"/airline_agent"}>Booking agents</AirlineMenuItem>
                     <AirlineMenuItem to={"/airplanes"}>Airplanes</AirlineMenuItem>
-                    <AirlineMenuItem to={"/add_airport"}>Add airport</AirlineMenuItem>
+                    <AirlineMenuItem to={"/airline_customer"}>Customer</AirlineMenuItem>
                     <AirlineMenuItem to={"/airline_report"}>View report</AirlineMenuItem>
                     <AirlineMenuItem to={"/airline_staffs"}>Staffs</AirlineMenuItem>
                   </Nav>
@@ -126,6 +129,9 @@ class Bar extends React.Component {
             <Route path='/add_flight' caseSensitive={false} element={<AddFlights />} />
             <Route path='/airplanes' caseSensitive={false} element={<Airplanes />} />
             <Route path='/airline_agent' caseSensitive={false} element={<AirlineAgent />} />
+            <Route path='/airline_report' caseSensitive={false} element={<AirlineReport />} />
+            <Route path='/airline_customer' caseSensitive={false} element={<AirlineCustomer />} />
+            <Route path='/airline_staffs' caseSensitive={false} element={<AirlineStaff />} />
             <Route path='/' caseSensitive={false} element={<Home />} />
           </Routes>
         </Container>

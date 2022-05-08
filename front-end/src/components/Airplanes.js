@@ -20,6 +20,7 @@ class AirplanesClass extends React.Component {
 
         this.addAirplane = this.addAirplane.bind(this);
         this.refreshTable = this.refreshTable.bind(this);
+        this.addAirport = this.addAirport.bind(this);
 
         this.refreshTable();
     }
@@ -42,11 +43,33 @@ class AirplanesClass extends React.Component {
                 number_of_seats: this.state.seats
             }
         }).then((res) => {
-            let result = res.data;
             this.setState({popupShow: false}, () => this.refreshTable())
         }).catch(() => {
             console.log("error")
         });
+    }
+
+    addAirport() {
+        let permissions = this.props.allCookies.user.permissions;
+        let isAdmin = false;
+        for(let i = 0; i < permissions.length; i++) 
+            if(permissions[i] === Constants.STAFF_ADMIN)
+                isAdmin = true;
+
+        if(!isAdmin)
+            return;
+
+        axios.post('http://localhost:5000/staff_addairport', null, {
+            params: {
+                username: this.props.allCookies.user.username,
+                airport_city: this.state.airportCity,
+                airport_name: this.state.airportName
+            }
+        }).then((res) => {
+            console.log(res.data);
+        }).catch(() => {
+            console.log("error");
+        })
     }
 
     refreshTable() {
@@ -66,6 +89,7 @@ class AirplanesClass extends React.Component {
         return (
             <Container className="airplanesContainer">
                 <Button onMouseUp={() => this.setState({popupShow: true})} style={{'width': '100%', 'marginBottom': '20px'}}>Add airplane</Button>
+                <Button onMouseUp={() => this.setState({popupShowAirport: true})} style={{'width': '100%', 'marginBottom': '20px'}}>Add airport</Button>
                 <Button onMouseUp={() => this.refreshTable()} style={{'width': '100%', 'marginBottom': '20px'}}>Refresh</Button>
                 <Table striped bordered hover>
                     <thead>
@@ -108,6 +132,33 @@ class AirplanesClass extends React.Component {
                     <Modal.Footer>
                         <Button onClick={this.addAirplane}>Add</Button>
                         <Button onClick={() => this.setState({popupShow: false})}>Close</Button>
+                    </Modal.Footer>
+                </Modal>
+                <Modal
+                    size="lg"
+                    aria-labelledby="contained-modal-title-vcenter"
+                    centered
+                    show={this.state.popupShowAirport}
+                    onHide={() => this.setState({popupShowAirport: false})}
+                >
+                    <Modal.Header closeButton>
+                        <Modal.Title id="contained-modal-title-vcenter">
+                            Add airport
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <Form.Group>
+                            <Form.Label>Airport city</Form.Label>
+                            <Form.Control onChange={(e) => this.setState({airportCity: e.target.value})} placeholder="Airport city" />
+                        </Form.Group>
+                        <Form.Group className="mt-3">
+                            <Form.Label>Airport name</Form.Label>
+                            <Form.Control onChange={(e) => this.setState({airportName: e.target.value})} placeholder="Airport name" />
+                        </Form.Group>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button onClick={this.addAirport}>Add</Button>
+                        <Button onClick={() => this.setState({popupShowAirport: false})}>Close</Button>
                     </Modal.Footer>
                 </Modal>
             </Container>

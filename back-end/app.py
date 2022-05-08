@@ -769,7 +769,7 @@ def staff_addairport():
     staff_username = request.args[Staff.USERNAME]
 
     with cnx.cursor() as cur:
-        query = f'select permission_type from permission where username = {staff_username}'
+        query = f'select permission_type from permission where username = \'{staff_username}\''
         cur.execute(query)
         permission = cur.fetchone()[0]
 
@@ -783,7 +783,7 @@ def staff_addairport():
 
             cnx.commit()
 
-            return 'Airport added!'
+            return Response(0).addData(Data('result', 'Added new airport'))
 
         except Exception as e:
             err = 'Add airport failed!'
@@ -834,97 +834,86 @@ def staff_viewfrequentcustomers():
         cur.execute(query)
         data1 = cur.fetchall()
 
+    return Response(0).addData(Data('result1', data1)).json()
+
+@app.route('/staff_viewcustomerflights', methods=['GET'])
+def staff_viewcustomerflights():
+
     with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
         #flights a particular customer has taken in the past year
         customer_email = request.args['customer_email']
+        staff_airline = request.args[Staff.WORKS]
 
         try:
-            query = f"select flight.airline_name, flight.flight_num from purchases where customer_email = '{customer_email}' and flight.airline_name = '{staff_airline}' and purchases.purchase_date >= adddate(date(now()), interval -12 month)"
+            query = f"select airline_name, flight_num from purchases natural join ticket where customer_email = '{customer_email}' and airline_name = '{staff_airline}' and purchase_date >= adddate(date(now()), interval -12 month)"
+            print(query)
             cursor.execute(query)
             data2 = cursor.fetchall()
+            return Response(0).addData(Data('result', data2)).json()
 
         except Exception as e:
-            err = 'Customer not found!'
+            err = 'Server error'
             print(e)
             return ErrorResponse(err).json()
-
-    return Response(0).addData(Data('result1', data1)).addData(Data('result2', data2)).json()
 
 
 
 @app.route('/staff_viewreport', methods = ['GET', 'POST'])
 def staff_viewreport():
     staff_username = request.args[Staff.USERNAME]
-    start_year = None
-    end_year = None
+    staff_airline = request.args['airline_name']
+    start_year = int(request.args['start_year'])
+    start_month = int(request.args['start_month'])
+    end_year = int(request.args['end_year'])
+    end_month = int(request.args['end_month'])
 
-    staff_airline = request.args[Staff.WORKS]
-    start_year = int(request.args.get['start_year'])
-    end_year = int(request.args.get['end_year'])
-    start_month = int(request.args.get['start_month'])
-    end_month = int(request.args.get['end_month'])
-
-    if start_year == None and end_year == None:
+    if start_year == 0 or start_month == 0 or end_year == 0 or end_month == 0:
         #default view is the past year
-        with cnx.cursor() as cur:
-            i = 0
-            query = f"select year(date_sub(date(now()), interval {i} month)) as year, month(date_sub(date(now()), interval {i} month)) as month, count(*) as tickets_sold from purchases natural join flight where flight.airline_name = '{staff_airline}' and year(purchase_date) = year(date_sub(date(now()), interval {i} month)) and month(purchase_date) = month(date_sub(date(now()), interval {i} month))"
+        with cnx.cursor(pymysql.cursors.DictCursor) as cur:
             months = [0,1,2,3,4,5,6,7,8,9,10,11,12]
             monthly_sales = []
 
+        #for month in months:
             for month in months:
-                i = month
+                query = f"select year(date_sub(date(now()), interval {month} month)) as year, month(date_sub(date(now()), interval {month} month)) as month, count(*) as tickets_sold from purchases natural join ticket where ticket.airline_name = '{staff_airline}' and year(purchase_date) = year(date_sub(date(now()), interval {month} month)) and month(purchase_date) = month(date_sub(date(now()), interval {month} month))"
                 cur.execute(query)
                 data = cur.fetchone()
                 monthly_sales.append(int(data['tickets_sold']))
                 months[month] = str(data['month'])+'/'+str(data['year'])
 
-            fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
-            ax1.bar(months, height=monthly_sales)
-            ax1.set_title('Monthly ticket sales')
-            ax1.set_xlabel('Month')
-            ax1.set_ylabel('Number of Tickets sold')
+            months = months[::-1]
+            monthly_sales = monthly_sales[::-1]
 
-        return {'status': 0, 'result': [months, monthly_sales]} 
+        return {'status': 0, 'result': [months, monthly_sales]}
 
     else:
-
         if start_year > end_year:
             return ErrorResponse('Start date has to be before end date!').json()
         if start_year == end_year:
             if start_month > end_month:
                 return ErrorResponse('Start date has to be before end date!').json()
 
-        start_date = str(start_year) + '-' +str(start_month) + '/' + '01'
-        end_date = str(end_year) + '-' +str(end_month) + '/' + '01'
+        start_date = str(start_year) + '-' +str(start_month) + '-' + '01'
+        end_date = str(end_year) + '-' +str(end_month) + '-' + '01'
 
-        with cnx.cursor() as cursor:
-            i = 0
-            query = f"select year(date_sub(date('{start_date}')), interval {i} month) as year, month(date_sub(date('{start_date}')), interval {i} month) as month, count(*) as tickets_sold from purchases natural join flight where flight.airline_name = '{staff_airline}' and year(purchase_date) = year(date_sub(date('{start_date}')), interval {i} month) and month(purchase_date) = month(date_sub(date('{start_date}')), interval {i} month)"
+        with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
+            num_months = (int(end_year) - int(start_year)) * 12 + (int(end_month) - int(start_month))
 
-            end_date = datetime.datetime(int(end_year),int(end_month),1)
-            start_date = datetime.datetime(int(start_year), int(start_month), 1)
-
-            num_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
-
-            months = [i for i in range(num_months)]
+            months = [i for i in range(num_months + 1)]
             monthly_sales = []
 
             for month in months:
-                i = month
+                query = f"select year(date_sub(date('{end_date}'), interval {month} month)) as year, month(date_sub(date('{end_date}'), interval {month} month)) as month, count(*) as tickets_sold from purchases natural join ticket where ticket.airline_name = '{staff_airline}' and year(purchase_date) = year(date_sub(date('{end_date}'), interval {month} month)) and month(purchase_date) = month(date_sub(date('{end_date}'), interval {month} month))"
+
                 cursor.execute(query)
-                data = cur.fetchone()
+                data = cursor.fetchone()
                 monthly_sales.append(int(data['tickets_sold']))
                 months[month] = str(data['month'])+'/'+str(data['year'])
 
-            fig, (ax1) = plt.subplots(1,1, figsize=(7,7))
-            ax1.bar(months, height=monthly_sales)
-            ax1.set_title('Monthly ticket sales')
-            ax1.set_xlabel('Month')
-            ax1.set_ylabel('Number of Tickets sold')
+            months = months[::-1]
+            monthly_sales = monthly_sales[::-1]
 
-        return {'status': 0, 'result': [months, monthly_sales]} 
-            
+        return {'status': 0, 'result': [months, monthly_sales]}
 
 @app.route('/staff_comparerevenue', methods = ['GET', 'POST'])
 def staff_comparerevenue():
@@ -989,7 +978,7 @@ def staff_comparerevenue():
     ax1.set_title('Sales in the past month')
     ax2.set_title('Sales in the past year')
 
-    return Response(0).addData(Data('past_month', last_month)).addData(Data('past_year', last_year)).json()
+    return Response(0).addData(Data('direct_last_month', direct_last_month)).addData(Data('direct_last_year', direct_last_year)).addData(Data('indirect_last_year', indirect_last_month)).addData(Data('indirect_last_month', indirect_last_month)).json()
 
 
 @app.route('/staff_viewtopdestinations', methods = ['GET', 'POST'])
@@ -1108,3 +1097,40 @@ def staff_logout():
     session.pop(customer_email)
     
     return "Goodbye!"
+
+
+@app.route('/search_customer', methods=['GET'])
+def search_customer():
+    email = request.args['customer']
+
+    query = f"select * from customer where email like '{email}%'"
+    with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+        cur.execute(query)
+        res = cur.fetchall()
+
+        return Response(0).addData(Data('customers', res)).json()
+
+
+@app.route('/search_staff', methods=['GET'])
+def search_staff():
+    username = request.args[Staff.USERNAME]
+
+    query = f"select * from airline_staff where username like '{username}%'"
+    with cnx.cursor(pymysql.cursors.DictCursor) as cur:
+        cur.execute(query)
+        res = cur.fetchall()
+
+        return Response(0).addData(Data('staffs', res)).json()
+
+
+@app.route('/get_permission', methods=['GET'])
+def get_permission():
+    username = request.args[Staff.USERNAME]
+
+    query = f"select permission_type from permission where username='{username}'"
+
+    with cnx.cursor() as cur:
+        cur.execute(query)
+        res = cur.fetchall()
+
+        return Response(0).addData(Data('permissions', res)).json()
