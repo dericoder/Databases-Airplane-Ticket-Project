@@ -15,7 +15,7 @@ class AirlineStaffClass extends React.Component {
             staffs: [],
             staffPermissions: [],
             staff: "",
-            titlePermission: "Permission"
+            titlePermission: "Permission",
         }
 
         this.searchStaff = this.searchStaff.bind(this);
@@ -41,7 +41,7 @@ class AirlineStaffClass extends React.Component {
     }
 
     changePermission() {
-        let permissions = this.props.allCookies.user.permission;
+        let permissions = this.props.allCookies.user.permissions;
         let isAdmin = false;
         for(let i = 0; i < permissions.length; i++) 
             if(permissions[i] === Constants.STAFF_ADMIN)
@@ -53,13 +53,21 @@ class AirlineStaffClass extends React.Component {
         axios.post('http://localhost:5000/staff_grantnewpermissions', null, {
             params: {
                 username: this.props.allCookies.user.username,
-                airline_name: this.props.allCookies.user.works
-
+                airline_name: this.props.allCookies.user.works,
+                staff_username: this.state.selectedStaff,
+                new_permission: this.state.titlePermission
             }
-        }).catch()
+        }).then((res) => {
+            console.log(res.data);
+        }).catch(() => {
+            console.log("error");
+        })
     }
 
     getStaffPermissions(username) {
+        if(this.state.titlePermission === "Permission")
+            return;
+
         axios.get('http://localhost:5000/get_permission', {
             params: {
                 username: username
@@ -90,7 +98,7 @@ class AirlineStaffClass extends React.Component {
                     {
                         this.state.staffs.map((info) => {
                             return (
-                                <ListGroupItem action onClick={() => this.setState({popupShow: true})}>{info.username}</ListGroupItem>
+                                <ListGroupItem key={info.username} action onClick={() => this.setState({popupShow: true, selectedStaff: info.username})}>{info.username}</ListGroupItem>
                             );
                         })
                     }

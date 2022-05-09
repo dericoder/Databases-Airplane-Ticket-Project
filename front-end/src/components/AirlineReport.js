@@ -2,7 +2,7 @@ import "../css/AirlineReport.css"
 import React from 'react'
 import axios from 'axios'
 import { withCookies } from 'react-cookie'
-import { Container, Form, Button, Tab, Tabs } from 'react-bootstrap'
+import { Container, Form, Button, Tab, Tabs, FloatingLabel as Label } from 'react-bootstrap'
 import { Bar, Pie } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -23,6 +23,8 @@ class AirlineReportClass extends React.Component {
         this.state = {
             ticketSoldMonths: [],
             ticketSoldValues: [],
+            topYear: [],
+            topMonth: [],
             start_year: 0,
             start_month: 0,
             end_year: 0,
@@ -70,8 +72,19 @@ class AirlineReportClass extends React.Component {
                 end_year: this.state.end_year,
                 end_month: this.state.end_month
             }
+
         }).then((res) => {
             this.setState({ticketSoldMonths: res.data.result[0], ticketSoldValues: res.data.result[1]});
+
+            axios.get('http://localhost:5000/staff_viewtopdestinations', {
+                params: {
+                    username: this.props.allCookies.user.username,
+                    airline_name: this.props.allCookies.user.works
+                }
+            }).then((res) => {
+                console.log(res.data);
+                this.setState({topMonth: res.data['topdestinations_3months'], topYear: res.data['topdestinations_1year']});
+            })
         }).catch(() => {
             console.log('error');
         })
@@ -140,6 +153,24 @@ class AirlineReportClass extends React.Component {
                     });
                 }} id="uncontrolled-tab-example" className="mb-3">
                     <Tab eventKey="tickets" title="Tickets">
+                        <Container className="mb-3" style={{'textAlign': 'center'}}>
+                        <h1>Top 3 destinations last 3 month</h1>
+                        {
+                            this.state.topMonth.map((info) => {
+                                return (
+                                    <Label style={{'fontSize': '30px'}}>{info.arrival_airport}</Label>
+                                );
+                            })
+                        }
+                        <h1>Top 3 destinations last year</h1>
+                        {
+                            this.state.topYear.map((info) => {
+                                return (
+                                    <Label style={{'fontSize': '30px'}}>{info.arrival_airport}</Label>
+                                );
+                            })
+                        }
+                        </Container>
                         <Bar 
                             options={{responsive: true}}
                             data={ticketSold}

@@ -85,10 +85,18 @@ class CustomerSpendingsClass extends React.Component {
         }).then((res) => {
             let response = res.data;
 
-            this.setState({
-                months: response['months'],
-                spending: response['spending']
-            });
+            if(res.data.status === -2) {
+                this.setState({
+                    months: [],
+                    spending: []
+                })
+            } else {
+                this.setState({
+                    months: response['months'],
+                    spending: response['spending']
+                });
+            }
+
         }).catch((err) => {
             this.setState({error: true, errorMessage: 'Server error'});
         });

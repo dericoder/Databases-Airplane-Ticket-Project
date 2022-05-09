@@ -430,6 +430,9 @@ def customer_trackmyspending():
                 month.append(i[1])
                 monthly_spending.append(i[0])
 
+            if(len(month) == 0):
+                return ErrorResponse('No spending', -2).json()
+
             previousMonth = month[0]
             for i in range(len(month)):
                 year = start_year
@@ -988,13 +991,13 @@ def staff_viewtopdestinations():
     staff_airline = request.args[Staff.WORKS]
     try:
         with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-            query = f"select arrival_airport from flight natural join purchases where flight.airline_name = '{staff_airline}' and purchase_date >= adddate(date(now()), interval -3 month) group by flight.arrival_airport order by count(*) desc"
+            query = f"select arrival_airport from flight natural join purchases where flight.airline_name = '{staff_airline}' and purchase_date >= adddate(date(now()), interval -3 month) group by flight.arrival_airport order by count(*) desc limit 3"
             cur.execute(query)
 
             data1 = cur.fetchall()
 
         with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-            query = f"select arrival_airport from flight natural join purchases where flight.airline_name = '{staff_airline}' and purchase_date >= adddate(date(now()), interval -12 month) group by flight.arrival_airport order by count(*) desc"
+            query = f"select arrival_airport from flight natural join purchases where flight.airline_name = '{staff_airline}' and purchase_date >= adddate(date(now()), interval -12 month) group by flight.arrival_airport order by count(*) desc limit 3"
             cur.execute(query)
 
             data2 = cur.fetchall()
@@ -1008,7 +1011,6 @@ def staff_viewtopdestinations():
 @app.route('/staff_grantnewpermissions', methods = ['GET', 'POST'])
 def staff_grantnewpermissions():
     staff_username = request.args[Staff.USERNAME]
-
     staff_airline = request.args[Staff.WORKS]
     with cnx.cursor() as cur:
         query = f"select permission_type from permission where username = '{staff_username}'"
@@ -1016,8 +1018,8 @@ def staff_grantnewpermissions():
         permission = cur.fetchone()[0]
 
     if permission == 'Admin' or permission == 'Both':
-        other_username = request.args.get['staff_username']
-        new_permission = request.args.get['new_permission']
+        other_username = request.args['staff_username']
+        new_permission = request.args['new_permission']
 
         if new_permission in ['Admin', 'Operator', 'Both']:
             with cnx.cursor() as cur:
@@ -1025,13 +1027,14 @@ def staff_grantnewpermissions():
                 q = f"select airline_name from airline_staff where username = '{other_username}'"
                 cur.execute(q)
                 other_airline = cur.fetchone()[0]
+                print(other_airline, staff_airline)
                 if other_airline != staff_airline:
-                    return ErrorResponse('Staff is froma different airline. Permission not granted!').json()
+                    return ErrorResponse('Staff is from a different airline. Permission not granted!').json()
                 
                 else:
-                    query = f"update permission set permission_type = '{new_permission}' where username = '{other_username}'"
+                    query = f"insert into permission values ('{other_username}', '{new_permission}')";
                     cur.execute(query)
-                
+
                 cnx.commit()
                 
             with cnx.cursor(pymysql.cursors.DictCursor) as cursor:
@@ -1039,7 +1042,7 @@ def staff_grantnewpermissions():
                 cursor.execute(query)
                 data = cursor.fetchall()
 
-            return {'status':0, 'updated list': data}.json()
+            return {'status':0, 'updated list': data}
 
 
         else:

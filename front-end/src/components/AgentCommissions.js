@@ -32,7 +32,7 @@ class AgentProfileClass extends React.Component {
             endDate: 0,
             total: 0,
             avg: 0,
-            tickets: 0
+            num_tickets: 0
         }
 
         axios.get('http://localhost:5000/bookingagent_viewmycommission', {
@@ -83,7 +83,7 @@ class AgentProfileClass extends React.Component {
             }
         }).then((res) => {
             let result = res.data['result']
-            this.setState({total: result['total_commission'], avg: result['average_commission'], tickets: result['number_of_tickets']});
+            this.setState({total: result['total_commission'], avg: result['average_commission'], num_tickets: result['number_of_tickets']});
         }).catch(() => {
             console.log("Error")
         })
@@ -129,7 +129,7 @@ class AgentProfileClass extends React.Component {
                 <Container className="mb-5">
                     <Label style={{'fontSize': '50px', 'width': '100%', 'textAlign': 'center'}}>Total Commissions</Label>
                     <Label style={{'fontSize': '50px', 'width': '100%', 'textAlign': 'center'}}>${this.state.total}</Label>
-                    <Label style={{'fontSize': '50px', 'width': '100%', 'textAlign': 'center'}}>Average Commissions per {this.state.tickets} tickets</Label>
+                    <Label style={{'fontSize': '50px', 'width': '100%', 'textAlign': 'center'}}>Average Commissions per {this.state.num_tickets} tickets</Label>
                     <Label style={{'fontSize': '50px', 'width': '100%', 'textAlign': 'center'}}>${this.state.avg}</Label>
 
                     <Container className="mb-3 mt-3 dateContainer">
