@@ -65,7 +65,7 @@ class RegisterClass extends React.Component {
             password: this.state.pass,
             first_name: this.state.fName,
             last_name: this.state.lName,
-            works_for: this.state.airline,
+            airline_name: this.state.airline,
             date_of_birth: this.state.dob
         }
 
@@ -86,9 +86,15 @@ class RegisterClass extends React.Component {
 
         axios.post('http://localhost:5000/register', null, {
             params: this.state.registerAs === Constants.STAFF ? staffParams : this.state.registerAs === Constants.AGENT ? agentParams : customerParams
-        }).then(() => {
-            const { cookies } = this.props;
-            cookies.set('registered', 'true');
+        }).then((res) => {
+            let result = res.data;
+
+            if(result[Constants.STATUS] === 0) {
+                const { cookies } = this.props;
+                cookies.set('registered', 'true');
+            } else {
+                this.setState({error: true, errorMessage: result[Constants.REASON]});
+            }
         }).catch((err) => {
             this.setState({error: true, errorMessage: "A server error occurred"});
         });
@@ -433,7 +439,7 @@ class RegisterClass extends React.Component {
                                 this.setState({airline: e.target.value, airlineValidated: e.target.value !== ""});
                             }} 
                             required={this.state.registerAs === Constants.STAFF}
-                            isInvalid={this.state.airlineValidated} />
+                            isInvalid={!this.state.airlineValidated} />
                         <Form.Control.Feedback type="invalid">
                             This field must not be empty
                         </Form.Control.Feedback>

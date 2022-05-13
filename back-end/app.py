@@ -533,7 +533,7 @@ def bookingagent_purchase():
             
             update_seat = f'update flight natural join airplane set seats = {int(avail_seats)-1} where flight.flight_num = {flight_num}'
             cur.execute(update_seat)
-            
+
             query2 = 'select max(ticket_id) as max from ticket'
             cur.execute(query2)
             ticket_id = cur.fetchone()

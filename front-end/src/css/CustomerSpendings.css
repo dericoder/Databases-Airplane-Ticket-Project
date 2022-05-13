@@ -1,6 +1,23 @@
 .spendingsContainer {
     width: 100%;
     height: 200px;
-    background-color: black;
     margin-top: 100px !important;
+    text-align: center;
+}
+
+.dateContainer {
+    display: flex;
+    justify-content: center;
+    text-align:center
+}
+
+.filterButton {
+    height: fit-content;
+    margin-top: auto;
+}
+
+.purchaseTicketButton {
+    margin-top: auto;
+    width: 100px;
+    margin-left: auto;
 }

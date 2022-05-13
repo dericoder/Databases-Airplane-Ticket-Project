@@ -15,7 +15,10 @@ class Constants {
     static STAFF_FNAME = 'first_name';
     static STAFF_LNAME = 'last_name';
     static STAFF_DOB = 'date_of_birth';
-    static STAFF_WORKS = 'works_for';
+    static STAFF_WORKS = 'airline_name';
+    static STAFF_PERMISSIONS = 'permission_type';
+    static STAFF_ADMIN = 'Admin';
+    static STAFF_OPERATOR = 'Operator';
 
     // customer constants
     static CUSTOMER_EMAIL = 'email';
@@ -34,16 +37,17 @@ class Constants {
     // agent constants
     static AGENT_EMAIL = 'email';
     static AGENT_PASSWORD = 'password';
-    static AGENT_ID = 'id';
+    static AGENT_ID = 'booking_agent_id';
 }
 
 class Staff {
-    constructor(username, fName, lName, dob, works) {
+    constructor(username, fName, lName, dob, works, permissions) {
         this.username = username;
         this.fName = fName;
         this.lName = lName;
         this.dob = dob;
         this.works = works;
+        this.permissions = permissions 
     }
 }
 
@@ -64,9 +68,9 @@ class Customer {
 }
 
 class Agent {
-    constructor(email, id) {
+    constructor(email, booking_agent_id) {
         this.email = email;
-        this.id = id;
+        this.booking_agent_id = booking_agent_id;
     }
 }
 

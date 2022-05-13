@@ -50,7 +50,8 @@ class LoginClass extends React.Component {
                                     response[Constants.STAFF_FNAME],
                                     response[Constants.STAFF_LNAME],
                                     response[Constants.STAFF_DOB],
-                                    response[Constants.STAFF_WORKS]);
+                                    response[Constants.STAFF_WORKS],
+                                    response['permissions']);
                 else if(this.state.type === Constants.CUSTOMER)
                     user = new Customer(response[Constants.CUSTOMER_EMAIL],
                                         response[Constants.CUSTOMER_NAME],
