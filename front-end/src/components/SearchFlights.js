@@ -241,6 +241,8 @@ class SearchClass extends React.Component {
     agentPurchase() {
         let info = this.state.flightInfo;
 
+        console.log(info)
+
         axios.post('http://localhost:5000/bookingagent_purchasetickets', null, {
             params: {
                 email: this.props.allCookies['user']['email'],
@@ -390,6 +392,8 @@ class SearchClass extends React.Component {
                                         <FlightList key={i} onMouseUp={() => {
                                                 if(this.props.allCookies['type'] === Constants.STAFF.toString())
                                                     this.setState({editPopupShow: true, flightInfo: data});
+                                                else
+                                                    this.setState({flightInfo: data})
                                             }} info={data} purchaseFlightTicket={this.purchaseFlightTicket}>
                                             {this.props.allCookies['type'] !== Constants.STAFF.toString() ? <Button onMouseUp={() => {
                                                     this.purchaseFlightTicket(data);

@@ -104,7 +104,7 @@ class Bar extends React.Component {
               </Navbar.Offcanvas>
               <Nav className="me-auto">
                 <Navbar.Brand onMouseUp={() => {
-                    if(this.props.allCookies.user !== 'null')
+                    if(this.props.allCookies.user !== 'null' && this.props.allCookies.type === Constants.STAFF.toString())
                       this.setState({showAirlineMenu: true})
                   }} style={{'cursor': 'pointer'}}>{this.props.allCookies.type === Constants.STAFF.toString() ? this.props.allCookies.user.works : "Traveloqa"}</Navbar.Brand>
                 <Nav.Link as={Link} to={"/"}>Home</Nav.Link>

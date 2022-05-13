@@ -321,6 +321,7 @@ def customer_purchaseflights():
 
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:
         findFlights = f"select * from ticket natural join purchases where flight_num={flight_num} and airline_name='{airline_name}'"
+        print(findFlights)
         cur.execute(findFlights)
         data = cur.fetchall()
 
@@ -486,6 +487,8 @@ def bookingagent_purchase():
     customer = request.args['customer']
     airline_name = request.args.get('airline_name')
     flight_num = request.args.get('flight_num')
+   
+    print(airline_name)
 
     with cnx.cursor() as curr:  
         query = f"SELECT airline_name from booking_agent_work_for where email = '{email}'"
