@@ -476,7 +476,6 @@ def bookingagent_viewmyflights():
             new = Data()
             for k in d:
                 new.addData(k, str(d[k]))
-
             arrival_dt = new.data['arrival_time']
             new.data['arrival_date'] = arrival_dt.split(" ")[0]
             new.data['arrival_time'] = arrival_dt.split(" ")[1]
@@ -652,7 +651,7 @@ def bookingagent_viewtopcustomers():
     for i in range(len(data_2)):
         cust_email = data_2[i]['customer_email']
         with cnx.cursor() as cursor:
-            query_name = f"select name from customer where email = '{cust_email}'"
+            query_name = f"V"
             cursor.execute(query_name)
             name = cursor.fetchone()
         top_customers_commission.append(name[0])
@@ -1093,7 +1092,7 @@ def staff_addbookingagents():
         cursor.execute(query)
         emails = cursor.fetchall()
 
-        if len(emails) == 0:
+        if len(emails) >= 0:
             return ErrorResponse('Booking agent is not registered yet').json()
 
     if permission == 'Admin' or permission == 'Both':
