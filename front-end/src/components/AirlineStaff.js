@@ -5,8 +5,9 @@ import { withCookies } from 'react-cookie'
 import { Container, Form, ListGroup, ListGroupItem, FormControl, Button, Modal, DropdownButton } from 'react-bootstrap'
 import { Constants } from "../Utils"
 import DropdownItem from "react-bootstrap/esm/DropdownItem"
+import Comp from './Comp'
 
-class AirlineStaffClass extends React.Component {
+class AirlineStaffClass extends Comp {
 
     constructor(props) {
         super(props);

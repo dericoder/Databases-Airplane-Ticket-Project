@@ -35,11 +35,14 @@ class LoginClass extends React.Component {
    }
 
     login() {
+        const time = new Date().getTime();
+
         axios.get('http://localhost:5000/login', {
             params: {
                 type: this.state.type,
                 user: this.state.username,
-                password: this.state.pass 
+                password: this.state.pass,
+                time: time
             }
         }).then((res) => {
             let response = res['data'];
@@ -66,7 +69,7 @@ class LoginClass extends React.Component {
                                         response[Constants.CUSTOMER_DOB]);
                 else if(this.state.type === Constants.AGENT)
                         user = new Agent(response[Constants.AGENT_EMAIL], response[Constants.AGENT_ID]);
-
+                
                 const { cookies } = this.props;
                 cookies.set('user', user);
                 cookies.set('type', this.state.type);
@@ -100,6 +103,9 @@ class LoginClass extends React.Component {
     render() {
         if(this.state.user !== 'null')
             return <Navigate to={{pathname: '/'}} />;
+
+        if(this.state.loggedOut === 'true')
+            return <Navigate to={{pathname: '/login'}} />;
 
         return (
             <Container id="form">

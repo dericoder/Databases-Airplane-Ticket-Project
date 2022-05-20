@@ -8,12 +8,9 @@ import { Typeahead } from 'react-bootstrap-typeahead'
 import axios from "axios";
 import { Navigate } from "react-router-dom"
 import FlightList from './FlightList'
+import Comp from './Comp'
 
-/*
-    TODO:
-    1. Booking agent cannot buy if they are not added into an airline yet
-*/
-class SearchClass extends React.Component {
+class SearchClass extends Comp {
 
     static propTypes = {
         cookies: instanceOf(Cookies).isRequired
@@ -269,6 +266,11 @@ class SearchClass extends React.Component {
                 return <Navigate to={{pathname: '/login'}} />;
             }
         }
+
+        /*
+        if(this.state.loggedOut === 'true')
+            return <Navigate to={{pathname: '/login'}} />;
+            */
 
         let i = -1;
         return (

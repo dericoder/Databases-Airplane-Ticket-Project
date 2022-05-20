@@ -94,6 +94,7 @@ class Airports {
     static SDF = {airport: "Louisville SDF", city: "Louisville", label: "Louisville, SDF"}
     static O_HARE = {airport: "O'Hare", city: "Chicago", label: "Chicago, O'Hare"}
     static SFO = {airport: "SFO", city: "San Francisco", label: "San Francisco, SFO"}
+    static HZ = {airport: "hz", city: "hang zhou", label:"hang zhou, HZ"}
 
     static getAirportList() {
         return [
@@ -101,7 +102,8 @@ class Airports {
             Airports.LA_GUARDIA,
             Airports.SDF,
             Airports.O_HARE,
-            Airports.SFO
+            Airports.SFO,
+            Airports.HZ
         ];
     }
 
@@ -124,5 +126,5 @@ export {
     Customer,
     Agent,
     Airports,
-    Flight
+    Flight,
 }

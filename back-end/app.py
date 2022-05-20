@@ -14,9 +14,10 @@ failed queries
 """
 
 import re
+from time import time
 from this import d
 from xml.dom.minidom import parseString
-from flask import Flask, request, jsonify, session, redirect, url_for, send_file
+from flask import Flask, request, jsonify, redirect, url_for, send_file
 from flask_cors import CORS
 import pymysql.cursors
 from datetime import date
@@ -33,7 +34,6 @@ AGENT = 2
 STAFF = 3
 
 app = Flask(__name__)
-app.secret_key = 'a8jcd_a89.d9'
 CORS(app)
 
 cnx = pymysql.connect(host='localhost',
@@ -41,6 +41,8 @@ cnx = pymysql.connect(host='localhost',
 					user='Admin',
                     password='Admin123.',
                     db='db_project')
+
+session = {}
 
 def escape(string):
     chars = ['\'', '\"', '\\']
@@ -53,6 +55,26 @@ def escape(string):
             res += c
     
     return res
+
+@app.route("/logout", methods = ['GET'])
+def logout():
+    session.pop(request.args['user'])
+
+    return Response(0).json()
+
+@app.route("/session", methods = ['GET'])
+def checkSession():
+    if(request.args['user'] not in session):
+        return ErrorResponse('User not in session').json()
+
+    userTime = session[request.args['user']]
+    currentTime = int(request.args['time'])
+    # if the user has been active for 1 hour
+    print((currentTime - userTime) / 60000)
+    if(currentTime < userTime or (currentTime - userTime) / 60000 >= 0.05):
+        return ErrorResponse('Relogin needed').json()
+
+    return Response(0).json()
 
 @app.route("/search")
 def search():
@@ -82,36 +104,10 @@ def search():
 
     return Response(0).addList('flights', data).json()
 
-@app.route("/")
-def foo():
-    return "test"
-
-@app.route("/airports")
-def test():
-    with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-            #look for upcoming flights that the customer has not bought yet
-        query1 = "select flight.flight_num from flight left outer join (purchases natural join ticket) using (flight_num) where purchases.customer_email != 'one@nyu.edu' and flight.status = 'Upcoming'"
-        cur.execute(query1)
-        data = cur.fetchall()
-
-    return str(len(data))
-
-@app.route('/public')
-def public():
-    with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-        query = "select * from flight where status = \'Upcoming\'"
-        cur.execute(query)
-        data = cur.fetchall()
-
-    return {'status': 0, 'result': data}
-
 #REGISTER
 
 @app.route("/register", methods = ["POST"])
 def register():
-    """
-    
-    """
     type = int(request.args['type'])
     if(type == CUSTOMER):
 
@@ -220,6 +216,7 @@ def register():
 def login():
     user = request.args.get('user')
     password = request.args.get('password')
+    time = int(request.args.get('time'))
     type = int(request.args.get('type'))
 
     if type == CUSTOMER:
@@ -237,7 +234,8 @@ def login():
                                         data[Customer.STREET], data[Customer.CITY], data[Customer.STATE],
                                         data[Customer.PHONE], data[Customer.PASSPORT_NUMBER], data[Customer.PASSPORT_COUNTRY],
                                         data[Customer.PASSPORT_EXP],data[Customer.DOB])
-                    session[data[Customer.EMAIL]] = customer.data
+
+                    session[data[Customer.EMAIL]] = time
                     return Response(0).addData(customer).json()
 
     elif type == STAFF:
@@ -263,6 +261,7 @@ def login():
                     for d in rv:
                         permissions.append(d['permission_type'])
 
+                    session[data[Staff.USERNAME]] = time
                     return Response(0).addData(staff).addData(Data('permissions', permissions)).json()
 
     elif type == AGENT:
@@ -278,6 +277,7 @@ def login():
                     return ErrorResponse('Incorrect password').json()
                 else:
                     agent = Agent(data[Agent.EMAIL], data[Agent.BOOKING_AGENT_ID])
+                    session[data[Agent.EMAIL]] = time
                     return Response(0).addData(agent).json()
 
 
@@ -286,7 +286,7 @@ def login():
 #CUSTOMER USE CASES
 @app.route('/customer_viewmyflights', methods = ['GET'])
 def customer_viewmyflights():
-    print(request.args)
+    session[request.args[Customer.EMAIL]] = int(time() * 1000)
     customer = request.args[Customer.EMAIL]
 
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:    
@@ -319,23 +319,20 @@ def customer_purchaseflights():
     flight_num = request.args.get('flight_num')
 
     with cnx.cursor(pymysql.cursors.DictCursor) as cur:
-        findFlights = f"select * from ticket natural join purchases where flight_num={flight_num} and airline_name='{airline_name}'"
-        print(findFlights)
+        findFlights = f"select * from ticket natural join purchases where flight_num={flight_num} and airline_name='{airline_name}' and customer_email='{customer}'"
         cur.execute(findFlights)
         data = cur.fetchall()
 
         if(len(data) > 0):
             return ErrorResponse('A customer cannot buy the same ticket more than once').json()
         else:
-            query1 = f'select seats from flight natural join airplane where flight.flight_num = {flight_num}'
+            query1 = f'select count(*) as taken, seats from flight natural join airplane where airline_name=\'{airline_name}\' and flight_num={flight_num}'
             cur.execute(query1)
-            avail_seats = cur.fetchone()['seats']
-            if int(avail_seats) == 0:
-                return ErrorResponse('No available seats!').json()
-            
-            update_seat = f'update flight natural join airplane set seats = {int(avail_seats)-1} where flight.flight_num = {flight_num}'
-            cur.execute(update_seat)
-            
+            data = cur.fetchone()
+            avail_seats = data['seats']
+            taken = data['taken']
+            if(avail_seats <= taken):
+                return ErrorResponse('No available seats').json()
         
             query2 = 'select max(ticket_id) as max from ticket'
             cur.execute(query2)
@@ -368,7 +365,7 @@ def customer_searchforflights():
             query = "select * from flight where status = 'Upcoming'"
             cur.execute(query)
             data = cur.fetchall()
-            return {'status':0, 'result': data}
+            return Response(0).addData(Data('result', data)).json()
     else:
         with cnx.cursor(pymysql.cursors.DictCursor) as cur:
             query = f"select * from flight where departure_airport=\"{departure}\" and arrival_airport=\"{arrival}\" and date(departure_time)=\'{date}\'"
@@ -453,14 +450,6 @@ def customer_trackmyspending():
                 
             return Response(0).addData(Data('months', month)).addData(Data('spending', monthly_spending)).json()
 
-@app.route('/customer_logout')
-def customer_logout():
-    customer_email = request.args[Customer.EMAIL]
-
-    session.pop(customer_email)
-    
-    return "Goodbye!"
-
 #BOOKING AGENT USE CASES
 
 @app.route('/bookingagent_viewmyflights', methods = ['GET'])
@@ -485,9 +474,7 @@ def bookingagent_viewmyflights():
             new.data['departure_time'] = departure_dt.split(" ")[1]
             data.append(new)
 
-
     return Response(0).addList('result', data).json()
-
 
 @app.route('/bookingagent_purchasetickets', methods = ['POST'])
 def bookingagent_purchase():
@@ -496,8 +483,6 @@ def bookingagent_purchase():
     airline_name = request.args.get('airline_name')
     flight_num = request.args.get('flight_num')
    
-    print(airline_name)
-
     with cnx.cursor() as curr:  
         query = f"SELECT airline_name from booking_agent_work_for where email = '{email}'"
         curr.execute(query)
@@ -524,15 +509,14 @@ def bookingagent_purchase():
         if(len(data) > 0):
             return ErrorResponse('A customer cannot buy the same ticket more than once').json()
         else:
-            query1 = f'select seats from flight natural join airplane where flight.flight_num = {flight_num}'
+            query1 = f'select count(*) as taken, seats from flight natural join airplane where airline_name=\'{airline_name}\' and flight_num={flight_num}'
             cur.execute(query1)
-            avail_seats = cur.fetchone()['seats']
-            if int(avail_seats) == 0:
-                return ErrorResponse('No available seats!').json()
+            data = cur.fetchone()
+            avail_seats = data['seats']
+            taken = data['taken']
+            if(avail_seats <= taken):
+                return ErrorResponse('No available seats').json()
             
-            update_seat = f'update flight natural join airplane set seats = {int(avail_seats)-1} where flight.flight_num = {flight_num}'
-            cur.execute(update_seat)
-
             query2 = 'select max(ticket_id) as max from ticket'
             cur.execute(query2)
             ticket_id = cur.fetchone()

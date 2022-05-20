@@ -8,7 +8,6 @@ import { Routes,  Route, Link, Navigate } from 'react-router-dom'
 import Login from './components/Login'
 import Home from './components/Home'
 import Register from "./components/Register";
-import Profile from "./components/Profile"
 import Search from "./components/SearchFlights"
 import CustomerSpendings from "./components/CustomerSpendings"
 import BookedFlights from "./components/BookedFlights"
@@ -23,8 +22,10 @@ import { Offcanvas } from "react-bootstrap"
 import AirlineAgent from "./components/AirlineAgent"
 import AirlineCustomer from "./components/AirlineCustomer"
 import AirlineStaff from "./components/AirlineStaff"
+import axios from "axios"
+import Comp from "./components/Comp"
 
-class Bar extends React.Component {
+class AppClass extends Comp {
     static propTypes = {
         cookies: instanceOf(Cookies).isRequired
     };
@@ -42,13 +43,51 @@ class Bar extends React.Component {
     if(this.props.allCookies['loggedOut'] !== undefined)
         this.props.cookies.remove('loggedOut');
     this.logout = this.logout.bind(this);
+
+    if(this.props.allCookies['user'] !== 'null')
+      axios.get('http://localhost:5000/session', {
+        params: {
+          user: this.props.allCookies.user.email === undefined ? this.props.allCookies.user.username : this.props.allCookies.user.email,
+          time: new Date().getTime()
+        }
+      }).then((res) => {
+        if(res.data.status === -1) {
+          alert("You will be logged out due to inactivity");
+          this.logout();
+        }
+
+      }).catch((err) => {
+        console.log(err);
+      });
+  }
+
+  static logO(cookies) {
+    cookies.remove('type');
+    cookies.remove('date');
+    cookies.remove('time');
+    cookies.set('user', null);
+    cookies.set('loggedOut', true)
+
+    axios.get('http://localhost:5000/logout', {
+      params: {
+        user: this.props.allCookies.user.email === undefined ? this.props.allCookies.user.username : this.props.allCookies.user.email,
+      }
+    })
   }
 
   logout() {
     const { cookies } = this.props;
     cookies.remove('type');
+    cookies.remove('date');
+    cookies.remove('time');
     cookies.set('user', null);
     cookies.set('loggedOut', true)
+
+    axios.get('http://localhost:5000/logout', {
+      params: {
+        user: this.props.allCookies.user.email === undefined ? this.props.allCookies.user.username : this.props.allCookies.user.email,
+      }
+    })
   }
 
   render() {
@@ -124,7 +163,6 @@ class Bar extends React.Component {
           <Routes>
             <Route path='/login' caseSensitive={false} element={<Login updateNavbar={() => {this.login()}} />} />
             <Route path='/register' caseSensitive={false} element={<Register />} />
-            <Route path='/profile' caseSensitive={false} element={<Profile />} />
             <Route path='/search_flights' caseSensitive={false} element={<Search />} />
             <Route path='/customer_spendings' caseSensitive={false} element={<CustomerSpendings />} />
             <Route path='/booked_flights' caseSensitive={false} element={<BookedFlights />} />
@@ -147,11 +185,15 @@ function App() {
 
   if(cookies['user'] === undefined)
     setCookie('user', null);
-  const NavBar = withCookies(Bar);
+
+  const AppCookies = withCookies(AppClass);
 
   return (
-    <NavBar />
+    <AppCookies />
   );
 }
 
 export default withCookies(App);
+export {
+  AppClass
+};

@@ -1,25 +1,21 @@
 import "../css/Home.css"
 import React from 'react';
-import Container from 'react-bootstrap/Container'
-import { Connection } from '../Utils'
+import Comp from './Comp'
+import { withCookies } from "react-cookie";
 
-class HomeClass extends React.Component {
-
-    constructor(props) {
-        super(props);
-    }
+class HomeClass extends Comp {
 
     render() {
         return (
-            <Container id="test">
-
-            </Container>
+        <></>
         );
     }
 }
 
 function Home() {
-    return <HomeClass />;
+    const HomeCookies = withCookies(HomeClass);
+
+    return <HomeCookies />;
 }
 
 export default Home;

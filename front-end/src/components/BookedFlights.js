@@ -5,18 +5,9 @@ import { Container } from 'react-bootstrap'
 import FlightList from './FlightList'
 import axios from 'axios'
 import { Constants } from '../Utils'
+import Comp from './Comp'
 
-/*
-    TODO:
-    1. More info for customer booked tickets
-        - purchase date
-        - status
-    2. More info for agent booked tickets
-        - which customer
-        - status
-        - purchase date
-*/
-class BookedFlightsClass extends React.Component {
+class BookedFlightsClass extends Comp {
 
     constructor(props) {
         super(props);

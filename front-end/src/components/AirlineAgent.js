@@ -4,8 +4,9 @@ import axios from 'axios'
 import { Container,  Table, Button, Modal, Form } from 'react-bootstrap'
 import { withCookies } from 'react-cookie'
 import { Constants } from "../Utils"
+import Comp from './Comp'
 
-class AirlineAgentClass extends React.Component {
+class AirlineAgentClass extends Comp {
 
     constructor(props) {
         super(props);

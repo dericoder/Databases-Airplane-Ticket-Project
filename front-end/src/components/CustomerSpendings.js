@@ -14,8 +14,9 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import Comp from './Comp'
 
-class CustomerSpendingsClass extends React.Component {
+class CustomerSpendingsClass extends Comp {
 
     static propTypes = {
         cookies: instanceOf(Cookies).isRequired

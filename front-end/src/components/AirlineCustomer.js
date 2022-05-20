@@ -3,8 +3,9 @@ import React from 'react'
 import { withCookies } from 'react-cookie'
 import axios from 'axios'
 import { Container, FloatingLabel as Label, Form, Button, FormControl, ListGroupItem, ListGroup, Modal } from 'react-bootstrap'
+import Comp from './Comp'
 
-class AirlineCustomerClass extends React.Component {
+class AirlineCustomerClass extends Comp {
 
     constructor(props) {
         super(props);

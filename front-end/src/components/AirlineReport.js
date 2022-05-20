@@ -14,8 +14,9 @@ import {
   Legend,
   ArcElement
 } from 'chart.js';
+import Comp from './Comp'
 
-class AirlineReportClass extends React.Component {
+class AirlineReportClass extends Comp {
 
     constructor(props) {
         super(props);

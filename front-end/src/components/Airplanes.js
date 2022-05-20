@@ -4,12 +4,13 @@ import axios from 'axios'
 import { withCookies } from 'react-cookie'
 import { Container, Button, Table, Modal, Form } from 'react-bootstrap'
 import { Constants } from "../Utils"
+import Comp from './Comp'
 
 /*
     TODO:
     1. validation when adding airplanes
 */
-class AirplanesClass extends React.Component {
+class AirplanesClass extends Comp {
 
     constructor(props) {
         super(props);

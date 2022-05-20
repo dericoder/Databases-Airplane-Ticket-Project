@@ -1,6 +1,7 @@
 import "../css/AgentCommissions.css"
 import React from 'react'
 import axios from 'axios'
+import Comp from './Comp'
 import { Container, FloatingLabel as Label, Form, Button } from "react-bootstrap"
 import { withCookies } from 'react-cookie'
 import { Constants } from "../Utils"
@@ -21,7 +22,7 @@ import {
     2. Formatting
     3. per tickets bug
  */
-class AgentProfileClass extends React.Component {
+class AgentProfileClass extends Comp {
 
     constructor(props) {
         super(props);

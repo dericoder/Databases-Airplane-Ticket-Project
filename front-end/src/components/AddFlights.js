@@ -5,8 +5,9 @@ import { withCookies } from 'react-cookie'
 import { Container, Form, Button, FloatingLabel as Label } from 'react-bootstrap'
 import { Airports, Constants } from "../Utils"
 import { Typeahead } from 'react-bootstrap-typeahead'
+import Comp from './Comp'
 
-class AddFlightsClass extends React.Component {
+class AddFlightsClass extends Comp {
 
     constructor(props) {
         super(props);
